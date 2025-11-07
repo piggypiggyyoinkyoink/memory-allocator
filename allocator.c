@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define FREE 0
 #define UNFREE 255
@@ -16,6 +17,7 @@ struct Node{
 
 static struct Node head; 
 static struct Node ass; 
+//static uint8_t *heapPtr;
 
 
 // Initialize the allocator over a provided memory block.
@@ -29,12 +31,18 @@ int mm_init(uint8_t *heap, size_t heap_size){
     }
     struct Node *headPtr = &head;
     struct Node *assPtr = &ass;
-    struct Node heapNode = {heap_size, FREE, headPtr, assPtr, (int*)heap };
+    struct Node heapNode = {(heap_size - 3*sizeof(struct Node)), FREE, headPtr, assPtr, (int*)heap };
     head.next = &heapNode;
     ass.prev = &heapNode;
 
     //TODO: write nodes to the heap
+    //heapPtr = heap;
+    memset(heap,0,heap_size); //set all bytes in the heap to 0
+    struct Node *test = (struct Node *) heap;
+    *test = head;
+
     printf("SIZE: %d",head.next->size);
+    printf("\n%.20s", *heap);
     return 0;
 };
 
@@ -66,6 +74,6 @@ void mm_free(void *ptr){
 int main(){
     int x = sizeof(ass);
     printf("%d",x);
-    mm_init(malloc(20), 20);
+    mm_init(malloc(80), 80);
     return 0;
 }
