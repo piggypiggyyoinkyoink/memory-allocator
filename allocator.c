@@ -55,21 +55,28 @@ int mm_init(uint8_t *heap, size_t heap_size){
     ass.prev = heapContentsPtr;
     heapNode.prev = heapHeadPtr;
     heapNode.next = heapAssPtr;
+    //set data pointer to point to where the actual data starts
+    heapNode.data = (int *)(uint8_t *)heapContentsPtr + sizeof(heapNode);
     //write nodes to the heap
     *heapHeadPtr = head;
     *heapAssPtr = ass;
     *heapContentsPtr = heapNode;
 
-
-
-
+    
+    
+    
     /* Example code:
+    
+    //update data for node
+    heapContentsPtr->data = (int *)((uint8_t *)heapContentsPtr + sizeof(struct Node));
+    *(heapContentsPtr->data) = 7;
 
 
     //write to heap
     struct Node *test = (struct Node *) heap;
     *test = head;
 
+    
     //read from heap
     struct Node *nnn = (struct Node *) heap;
     printf("DINGUS: %d\n", nnn->size);
@@ -110,10 +117,12 @@ int main(){
     mm_init(b, 800);
     //reading from the heap outside the init function
     /*
+    //get head node
     struct Node *nnn = (struct Node *) heapPtr;
     struct Node node = *nnn;
 
-    printf("DINGUS: %d\n", (node.next)->size);
+    //print data stored in next node
+    printf("DINGUS: %d\n", *(node.next)->data);
     */
     free(b);
     return 0;
