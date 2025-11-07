@@ -39,9 +39,16 @@ int mm_init(uint8_t *heap, size_t heap_size){
     //TODO: write nodes to the heap
     heapPtr = heap;
     memset(heap,0,heap_size); //set all bytes in the heap to 0
+
+    //put the head at the start of the heap
     struct Node *heapHeadPtr = (struct Node *) heap;
     *heapHeadPtr = head;
 
+    //put the ass at the end of the heap
+    struct Node *heapAssPtr = (struct Node *) (((uint8_t *)heap + (heap_size-1)) - sizeof(ass) );
+    *heapAssPtr = ass;
+
+    
     /*
     //write to heap
     struct Node *test = (struct Node *) heap;
