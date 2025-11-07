@@ -17,7 +17,7 @@ struct Node{
 
 static struct Node head; 
 static struct Node ass; 
-//static uint8_t *heapPtr;
+static uint8_t *heapPtr;
 
 
 // Initialize the allocator over a provided memory block.
@@ -25,7 +25,6 @@ static struct Node ass;
 int mm_init(uint8_t *heap, size_t heap_size){
     head.size = 0; head.state = UNFREE; head.prev = NULL; head.next = NULL;
     ass.size = 0; ass.state = UNFREE; ass.prev = NULL; ass.next = NULL;
-    printf("%zu", sizeof(heap));
     if (heap_size < (3*sizeof(struct Node))){
         //not enough heap space to do anything
         printf("Uh oh");
@@ -38,16 +37,22 @@ int mm_init(uint8_t *heap, size_t heap_size){
     ass.prev = &heapNode;
 
     //TODO: write nodes to the heap
-    //heapPtr = heap;
+    heapPtr = heap;
     memset(heap,0,heap_size); //set all bytes in the heap to 0
+    struct Node *heapHeadPtr = (struct Node *) heap;
+    *heapHeadPtr = head;
+
+    /*
+    //write to heap
     struct Node *test = (struct Node *) heap;
     *test = head;
+
+    //read from heap
     struct Node *nnn = (struct Node *) heap;
     printf("DINGUS: %d\n", nnn->size);
-
+    */
 
     printf("SIZE: %d",head.next->size);
-    //printf("\n%.20s", *heap);
     return 0;
 };
 
@@ -80,6 +85,11 @@ int main(){
     int x = sizeof(ass);
     uint8_t *b = malloc(800*sizeof(uint8_t));
     mm_init(b, 800);
+    //reading from the heap outside the init function
+    /*
+    struct Node *nnn = (struct Node *) heapPtr;
+    printf("DINGUS: %d\n", nnn->size);
+    */
     free(b);
     return 0;
 }
