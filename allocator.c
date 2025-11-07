@@ -30,26 +30,42 @@ int mm_init(uint8_t *heap, size_t heap_size){
         printf("Uh oh");
         return -1;
     }
-    struct Node *headPtr = &head;
-    struct Node *assPtr = &ass;
-    struct Node heapNode = {(heap_size - 3*sizeof(struct Node)), FREE, headPtr, assPtr, (int*)heap };
-    head.next = &heapNode;
-    ass.prev = &heapNode;
 
-    //TODO: write nodes to the heap
+    //these are currently useless - need to point to lcoations on the heap.
+
+    struct Node heapNode = {(heap_size - 3*sizeof(struct Node)), FREE, NULL, NULL, (int*)heap };
+
     heapPtr = heap;
     memset(heap,0,heap_size); //set all bytes in the heap to 0
 
+
+    //Initialise pointers to nodes on the heap
+
     //put the head at the start of the heap
     struct Node *heapHeadPtr = (struct Node *) heap;
-    *heapHeadPtr = head;
-
-    //put the ass at the end of the heap
-    struct Node *heapAssPtr = (struct Node *) (((uint8_t *)heap + (heap_size-1)) - sizeof(ass) );
-    *heapAssPtr = ass;
-
     
-    /*
+    //put the ass  at the end of the heap
+    struct Node *heapAssPtr = (struct Node *) (((uint8_t *)heap + (heap_size-1)) - sizeof(ass) );
+    
+    //put heapNode in the middle
+    struct Node *heapContentsPtr = (struct Node *) ((uint8_t *)heap + sizeof(head));
+    
+    //set the prev and next pointers for each node
+    head.next = heapContentsPtr;
+    ass.prev = heapContentsPtr;
+    heapNode.prev = heapHeadPtr;
+    heapNode.next = heapAssPtr;
+    //write nodes to the heap
+    *heapHeadPtr = head;
+    *heapAssPtr = ass;
+    *heapContentsPtr = heapNode;
+
+
+
+
+    /* Example code:
+
+
     //write to heap
     struct Node *test = (struct Node *) heap;
     *test = head;
@@ -95,7 +111,9 @@ int main(){
     //reading from the heap outside the init function
     /*
     struct Node *nnn = (struct Node *) heapPtr;
-    printf("DINGUS: %d\n", nnn->size);
+    struct Node node = *nnn;
+
+    printf("DINGUS: %d\n", (node.next)->size);
     */
     free(b);
     return 0;
