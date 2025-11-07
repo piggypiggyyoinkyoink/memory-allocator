@@ -25,8 +25,10 @@ static struct Node ass;
 int mm_init(uint8_t *heap, size_t heap_size){
     head.size = 0; head.state = UNFREE; head.prev = NULL; head.next = NULL;
     ass.size = 0; ass.state = UNFREE; ass.prev = NULL; ass.next = NULL;
-    if (sizeof(*heap) < (3*sizeof(struct Node))){
+    printf("%zu", sizeof(heap));
+    if (heap_size < (3*sizeof(struct Node))){
         //not enough heap space to do anything
+        printf("Uh oh");
         return -1;
     }
     struct Node *headPtr = &head;
@@ -40,9 +42,12 @@ int mm_init(uint8_t *heap, size_t heap_size){
     memset(heap,0,heap_size); //set all bytes in the heap to 0
     struct Node *test = (struct Node *) heap;
     *test = head;
+    struct Node *nnn = (struct Node *) heap;
+    printf("DINGUS: %d\n", nnn->size);
+
 
     printf("SIZE: %d",head.next->size);
-    printf("\n%.20s", *heap);
+    //printf("\n%.20s", *heap);
     return 0;
 };
 
@@ -73,7 +78,8 @@ void mm_free(void *ptr){
 
 int main(){
     int x = sizeof(ass);
-    printf("%d",x);
-    mm_init(malloc(80), 80);
+    uint8_t *b = malloc(800*sizeof(uint8_t));
+    mm_init(b, 800);
+    free(b);
     return 0;
 }
