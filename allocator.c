@@ -12,7 +12,7 @@ struct Node{
     uint8_t state; //free or not free
     struct Node *prev; //pointer to previous block
     struct Node *next; //pointer to next block
-    int *data; //pointer to data.
+    void *data; //pointer to data.
 };
 
 static struct Node head; 
@@ -56,7 +56,7 @@ int mm_init(uint8_t *heap, size_t heap_size){
     heapNode.prev = heapHeadPtr;
     heapNode.next = heapAssPtr;
     //set data pointer to point to where the actual data starts
-    heapNode.data = (int *)(uint8_t *)heapContentsPtr + sizeof(heapNode);
+    heapNode.data = (void *)((uint8_t *)heapContentsPtr + sizeof(heapNode));
     //write nodes to the heap
     *heapHeadPtr = head;
     *heapAssPtr = ass;
@@ -64,19 +64,18 @@ int mm_init(uint8_t *heap, size_t heap_size){
 
     
     
-    
     /* Example code:
     
+    
     //update data for node
-    heapContentsPtr->data = (int *)((uint8_t *)heapContentsPtr + sizeof(struct Node));
-    *(heapContentsPtr->data) = 7;
-
+    *(int *)heapContentsPtr->data = 42;
+    (*(char *)heapContentsPtr->data) ='a';
 
     //write to heap
     struct Node *test = (struct Node *) heap;
     *test = head;
 
-    
+
     //read from heap
     struct Node *nnn = (struct Node *) heap;
     printf("DINGUS: %d\n", nnn->size);
@@ -122,7 +121,9 @@ int main(){
     struct Node node = *nnn;
 
     //print data stored in next node
-    printf("DINGUS: %d\n", *(node.next)->data);
+    printf("DINGUS: %d\n", *(int *)((node.next)->data));
+    printf("DINGUS: %c\n", *(char *)((node.next)->data));
+
     */
     free(b);
     return 0;
