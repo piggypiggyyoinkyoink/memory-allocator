@@ -1,13 +1,41 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 
+#define FREE 0
+#define UNFREE 255
+
+struct Node{
+    size_t size; //size of memory block
+    uint8_t state; //free or not free
+    struct Node *prev; //pointer to previous block
+    struct Node *next; //pointer to next block
+    int *data; //pointer to data.
+};
+
+static struct Node head; 
+static struct Node ass; 
 
 
 // Initialize the allocator over a provided memory block.
 // Returns 0 on success, non-zero on failure.
 int mm_init(uint8_t *heap, size_t heap_size){
-    printf("Hello World");
+    head.size = 0; head.state = UNFREE; head.prev = NULL; head.next = NULL;
+    ass.size = 0; ass.state = UNFREE; ass.prev = NULL; ass.next = NULL;
+    if (sizeof(*heap) < (3*sizeof(struct Node))){
+        //not enough heap space to do anything
+        return -1;
+    }
+    struct Node *headPtr = &head;
+    struct Node *assPtr = &ass;
+    struct Node heapNode = {heap_size, FREE, headPtr, assPtr, (int*)heap };
+    head.next = &heapNode;
+    ass.prev = &heapNode;
+
+    //TODO: write nodes to the heap
+    printf("SIZE: %d",head.next->size);
+    return 0;
 };
 
 // Allocate a block with ALIGN-byte aligned payload. Returns
@@ -36,5 +64,8 @@ void mm_free(void *ptr){
 };
 
 int main(){
+    int x = sizeof(ass);
+    printf("%d",x);
+    mm_init(malloc(20), 20);
     return 0;
 }
