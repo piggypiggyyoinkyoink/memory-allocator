@@ -1,5 +1,7 @@
-#include <cstddef>
-#include <cstdint>
+#include <stdio.h>
+#include <stddef.h>
+#include <stdint.h>
+
 
 
 // Initialize the allocator over a provided memory block.
@@ -32,3 +34,7 @@ void mm_free(void *ptr){
     printf("Hello World");
 
 };
+
+int main(){
+    return 0;
+}
