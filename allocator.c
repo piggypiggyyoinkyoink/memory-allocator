@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <iso646.h>
 #define FREE 0
 #define UNFREE 255
 
@@ -72,6 +73,7 @@ int mm_init(uint8_t *heap, size_t heap_size){
     *heapAssPtr = ass;
     *heapContentsPtr = heapNode;
 
+    printf("\nSIZE OF NODE: %d",sizeof(heapNode));
     
     
     /* Example code:
@@ -91,14 +93,35 @@ int mm_init(uint8_t *heap, size_t heap_size){
     printf("DINGUS: %d\n", nnn->size);
     */
 
-    printf("SIZE: %d",head.next->size);
+    printf("\nSIZE: %d",head.next->size);
     return 0;
 };
 
 // Allocate a block with ALIGN-byte aligned payload. Returns
 // NULL on failure.
 void *mm_malloc(size_t size){
+    uint8_t end = 0;
+    uint8_t found = 0;
+    struct Node* currentNodePtr = (struct Node *) head.next;
+    struct Node currentNode= *currentNodePtr;
+    while ((not end) and (not found)){
+        if (currentNode.state == FREE and currentNode.size >= size){
+            printf("LETS FUCKING GO");
+            currentNode.state = UNFREE; //unfree the node
+            *currentNodePtr = currentNode;//write back to heap
+            found = 1;
+        }else if (currentNode.next == NULL){
+            end = 1;
+            
+            printf("NOPE");
+        }else{
+            currentNodePtr = (struct Node *) currentNode.next;
+            currentNode = *currentNodePtr;
+            printf("NEXT");
+        }
+    }
     printf("Hello World");
+    return NULL;
 };
 
 // Safely read data from an allocated block starting at offset bytes into buf.
@@ -122,7 +145,7 @@ void mm_free(void *ptr){
 
 int main(){
     uint8_t *b = malloc(800*sizeof(uint8_t));
-    
+
     //define 5-bit pattern
     uint8_t p1 = 0;
     uint8_t p2 = 1;
@@ -140,6 +163,9 @@ int main(){
 
     // run init
     mm_init(b, 800);
+
+    mm_malloc(76);
+    mm_malloc(7);
     //reading from the heap outside the init function
     /*
     //get head node
