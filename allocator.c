@@ -3,7 +3,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
 #define FREE 0
 #define UNFREE 255
 
@@ -18,25 +17,30 @@ struct Node{
 static struct Node head; 
 static struct Node ass; 
 static uint8_t *heapPtr;
+static uint8_t pattern[5];
 
 
 // Initialize the allocator over a provided memory block.
 // Returns 0 on success, non-zero on failure.
 int mm_init(uint8_t *heap, size_t heap_size){
+    //initialise head and ass
     head.size = 0; head.state = UNFREE; head.prev = NULL; head.next = NULL;
     ass.size = 0; ass.state = UNFREE; ass.prev = NULL; ass.next = NULL;
+
     if (heap_size < (3*sizeof(struct Node))){
         //not enough heap space to do anything
         printf("Uh oh");
         return -1;
     }
-
-    //these are currently useless - need to point to lcoations on the heap.
-
+    for(int i = 0; i<5; i++){
+        uint8_t byte = *(heap+i);
+        pattern[i] = byte;
+        printf("\nPATTERN:%x", pattern[i]);
+    }
     struct Node heapNode = {(heap_size - 3*sizeof(struct Node)), FREE, NULL, NULL, (int*)heap };
 
     heapPtr = heap;
-    memset(heap,0,heap_size); //set all bytes in the heap to 0
+    //get first byte of heap
 
 
     //Initialise pointers to nodes on the heap
@@ -111,8 +115,25 @@ void mm_free(void *ptr){
 };
 
 int main(){
-    int x = sizeof(ass);
     uint8_t *b = malloc(800*sizeof(uint8_t));
+
+    //define 5-bit pattern
+    uint8_t p1 = 0;
+    uint8_t p2 = 1;
+    uint8_t p3 = 2;
+    uint8_t p4 = 4;
+    uint8_t p5 = 8;
+
+    for (int i=0; i<800; i+=5){
+        *(b+i) = p1;
+        *(b+i+1) = p2;
+        *(b+i+2) = p3;
+        *(b+i+3) = p4;
+        *(b+i+4) = p5;
+
+    }
+
+    // run init
     mm_init(b, 800);
     //reading from the heap outside the init function
     /*
