@@ -97,27 +97,57 @@ int mm_init(uint8_t *heap, size_t heap_size){
     return 0;
 };
 
+
+void resize_node(struct Node* nodePtr, size_t size){
+    
+    struct Node n = *(nodePtr);
+    if (n.size < size){
+        printf("\nOH FUCK");
+    }
+    struct Node newNode = {(n.size - (size + sizeof(struct Node))), FREE, NULL, NULL, NULL };
+    newNode.data = NULL;
+    newNode.state = FREE;
+    newNode.size = (n.size - (size + sizeof(struct Node)));
+    n.size = size;
+    struct Node* newNodePtr = (struct Node*)((uint8_t*)nodePtr + size + sizeof(struct Node));
+
+    struct Node* nextNodePtr = (struct Node *) n.next;
+    struct Node nextNode = *nextNodePtr;
+    
+    newNode.prev = nodePtr;
+    newNode.next = nextNodePtr;
+    n.next = newNodePtr;
+    nextNode.prev = newNodePtr;
+
+    *nodePtr = n;
+    *newNodePtr = newNode;
+    *nextNodePtr = nextNode;
+
+}
+
 // Allocate a block with ALIGN-byte aligned payload. Returns
 // NULL on failure.
 void *mm_malloc(size_t size){
+    printf("\nSIZE_MALLOC: %d", size);
     uint8_t end = 0;
     uint8_t found = 0;
     struct Node* currentNodePtr = (struct Node *) head.next;
     struct Node currentNode= *currentNodePtr;
     while ((not end) and (not found)){
         if (currentNode.state == FREE and currentNode.size >= size){
-            printf("LETS FUCKING GO");
+            printf("\nLETS FUCKING GO");
             currentNode.state = UNFREE; //unfree the node
             *currentNodePtr = currentNode;//write back to heap
+            resize_node(currentNodePtr, size);
             found = 1;
         }else if (currentNode.next == NULL){
             end = 1;
             
-            printf("NOPE");
+            printf("\nNOPE");
         }else{
             currentNodePtr = (struct Node *) currentNode.next;
             currentNode = *currentNodePtr;
-            printf("NEXT");
+            printf("\nNEXT");
         }
     }
     printf("Hello World");
