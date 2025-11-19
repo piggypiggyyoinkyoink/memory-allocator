@@ -134,10 +134,13 @@ void *mm_malloc(size_t size){
     printf("\nSIZE_MALLOC: %d", size);
     uint8_t end = 0;
     uint8_t found = 0;
+    //start at the first data node
     struct Node* currentNodePtr = (struct Node *) head.next;
     struct Node currentNode= *currentNodePtr;
+    //check all nodes until we find a free one of sufficient size, or reach ass
     while ((not end) and (not found)){
         if (currentNode.state == FREE and currentNode.size >= size){
+            //resize and allocate this node
             printf("\nLETS FUCKING GO");
             currentNode.state = UNFREE; //unfree the node
             *currentNodePtr = currentNode;//write back to heap
@@ -147,10 +150,12 @@ void *mm_malloc(size_t size){
             found = 1;
             return currentNodePtr;
         }else if (currentNode.next == NULL){
+            //no available nodes of sufficient size
             end = 1;
             printf("\nNOPE");
             return NULL;
         }else{
+            //try next node
             currentNodePtr = (struct Node *) currentNode.next;
             currentNode = *currentNodePtr;
             printf("\nNEXT");
@@ -202,6 +207,7 @@ int main(){
 
     void* ptr = mm_malloc(76);
     void* ptr2 = mm_malloc(7);
+    void* ptr3 = mm_malloc(700);
     //reading from the heap outside the init function
     /*
     //get head node
