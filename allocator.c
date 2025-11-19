@@ -32,15 +32,21 @@ int mm_init(uint8_t *heap, size_t heap_size){
         printf("Uh oh");
         return -1;
     }
+    //Get 5-byte pattern (needs updating to some kinda majority vote thingy to handle shenanigans)
     for(int i = 0; i<5; i++){
         uint8_t byte = *(heap+i);
         pattern[i] = byte;
-        printf("\nPATTERN:%x", pattern[i]);
     }
+    //DEBUG: print pattern
+    for(int i = 0; i<5; i++){
+        printf("\nPATTERN:%x", pattern[i]);
+
+    }
+
+    //initialise initial data node
     struct Node heapNode = {(heap_size - 3*sizeof(struct Node)), FREE, NULL, NULL, (int*)heap };
 
     heapPtr = heap;
-    //get first byte of heap
 
 
     //Initialise pointers to nodes on the heap
@@ -95,13 +101,13 @@ void *mm_malloc(size_t size){
     printf("Hello World");
 };
 
-// Safely read data from an allocated block at offset bytes into buf.
+// Safely read data from an allocated block starting at offset bytes into buf.
 // Returns the number of bytes read, or -1 if corruption or invalid pointer detected.
 int mm_read(void *ptr, size_t offset, void *buf, size_t len){
     printf("Hello World");
 };
 
-// Safely write data into an allocated block at offset bytes from src.
+// Safely write data into an allocated block starting at offset bytes from src.
 // Returns the number of bytes written, or -1 if corruption or invalid pointer detected.
 int mm_write(void *ptr, size_t offset, const void *src, size_t len){
     printf("Hello World");
@@ -116,21 +122,20 @@ void mm_free(void *ptr){
 
 int main(){
     uint8_t *b = malloc(800*sizeof(uint8_t));
-
+    
     //define 5-bit pattern
     uint8_t p1 = 0;
     uint8_t p2 = 1;
     uint8_t p3 = 2;
     uint8_t p4 = 4;
     uint8_t p5 = 8;
-
+    //set pattern in all bytes in heap
     for (int i=0; i<800; i+=5){
         *(b+i) = p1;
         *(b+i+1) = p2;
         *(b+i+2) = p3;
         *(b+i+3) = p4;
         *(b+i+4) = p5;
-
     }
 
     // run init
