@@ -104,7 +104,7 @@ void resize_node(struct Node* nodePtr, size_t size){
     if (n.size < size){
         printf("\nOH FUCK");
     }
-    struct Node newNode = {(n.size - (size + sizeof(struct Node))), FREE, NULL, NULL, NULL };
+    struct Node newNode;
     newNode.data = NULL;
     newNode.state = FREE;
     newNode.size = (n.size - (size + sizeof(struct Node)));
