@@ -99,30 +99,33 @@ int mm_init(uint8_t *heap, size_t heap_size){
 
 
 void resize_node(struct Node* nodePtr, size_t size){
-    
+    //initialise current node as n
     struct Node n = *(nodePtr);
     if (n.size < size){
         printf("\nOH FUCK");
     }
+    //initialise new node
     struct Node newNode;
-    newNode.data = NULL;
     newNode.state = FREE;
     newNode.size = (n.size - (size + sizeof(struct Node)));
+    //update current node size
     n.size = size;
-    struct Node* newNodePtr = (struct Node*)((uint8_t*)nodePtr + size + sizeof(struct Node));
-
+    //get the correct pointer for the new node
+    struct Node* newNodePtr = (struct Node*)((uint8_t*)nodePtr + size + sizeof(struct Node)); //wtf is this pointer arithmetic
+    //initialise data pointer for new node
+    newNode.data = (void *)((uint8_t *)newNodePtr + sizeof(struct Node));
+    //get next node
     struct Node* nextNodePtr = (struct Node *) n.next;
     struct Node nextNode = *nextNodePtr;
-    
+    //update prev and next pointers
     newNode.prev = nodePtr;
     newNode.next = nextNodePtr;
     n.next = newNodePtr;
     nextNode.prev = newNodePtr;
-
+    //write to heap
     *nodePtr = n;
     *newNodePtr = newNode;
     *nextNodePtr = nextNode;
-
 }
 
 // Allocate a block with ALIGN-byte aligned payload. Returns
@@ -138,12 +141,15 @@ void *mm_malloc(size_t size){
             printf("\nLETS FUCKING GO");
             currentNode.state = UNFREE; //unfree the node
             *currentNodePtr = currentNode;//write back to heap
-            resize_node(currentNodePtr, size);
+            if (currentNode.size > size ){
+                resize_node(currentNodePtr, size);//resize node so there is some heap left for everything else
+            }
             found = 1;
+            return currentNodePtr;
         }else if (currentNode.next == NULL){
             end = 1;
-            
             printf("\nNOPE");
+            return NULL;
         }else{
             currentNodePtr = (struct Node *) currentNode.next;
             currentNode = *currentNodePtr;
@@ -194,8 +200,8 @@ int main(){
     // run init
     mm_init(b, 800);
 
-    mm_malloc(76);
-    mm_malloc(7);
+    void* ptr = mm_malloc(76);
+    void* ptr2 = mm_malloc(7);
     //reading from the heap outside the init function
     /*
     //get head node
