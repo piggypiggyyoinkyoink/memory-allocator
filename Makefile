@@ -1,3 +1,3 @@
 
 all:
-	gcc -o runme allocator.c
+	gcc -Wall -Wextra -o runme allocator.c
