@@ -188,9 +188,12 @@ void mm_free(void *ptr){
         printf("\nWhoopsie");
         return;
     }
+    //get size and data pointer of node
     size_t size = n.size;
     uint8_t* dataPtr = n.data;
+    //to ensure pattern is properly aligned
     int x = (dataPtr - heapPtr) % 5;
+    //overwrite node data with 5 byte pattern.
     //if x = 0 -> 0,1,2,3,4; x = 1 -> 1,2,3,4,0
     for (int i=0; i<size; i+=5){
         *(dataPtr+i) = pattern[(0+x)%5];
@@ -199,10 +202,11 @@ void mm_free(void *ptr){
         *(dataPtr+i+3) = pattern[(3+x)%5];
         *(dataPtr+i+4) = pattern[(4+x)%5];
     }
-
+    //free node
     n.state = FREE;
     *nodePtr = n;//write back to heap
 
+    //TODO: merge node with adjacent free nodes, and overwrite the merged node's metadata with the 5B pattern.
 };
 
 int main(){
