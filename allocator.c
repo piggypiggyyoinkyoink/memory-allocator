@@ -176,6 +176,9 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len){
     if (n.state != UNFREE){
         return -1;
     }
+    if (len < (size-offset)){
+        return -1;
+    }
     int numBytes = 0;
     for (size_t i = offset; i<(size-offset); i++){//should this be len instead of size-offset??
         *(buff+i) = *(dataPtr+i);
