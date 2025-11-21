@@ -177,6 +177,22 @@ int mm_write(void *ptr, size_t offset, const void *src, size_t len){
     printf("Hello World");
 };
 
+
+//overwrite a node's data with the 5 byte pattern
+void overwrite_data(uint8_t* dataPtr, size_t size){
+    //to ensure pattern is properly aligned
+    int x = (dataPtr - heapPtr) % 5;
+    //overwrite node data with 5 byte pattern.
+    //if x = 0 -> 0,1,2,3,4; x = 1 -> 1,2,3,4,0
+    for (int i=0; i<size; i+=5){
+        *(dataPtr+i) = pattern[(0+x)%5];
+        *(dataPtr+i+1) = pattern[(1+x)%5];
+        *(dataPtr+i+2) = pattern[(2+x)%5];
+        *(dataPtr+i+3) = pattern[(3+x)%5];
+        *(dataPtr+i+4) = pattern[(4+x)%5];
+    }
+}
+
 // Free a previously-allocated pointer (ignore NULL).
 // Must detect double-free.
 void mm_free(void *ptr){
@@ -196,17 +212,8 @@ void mm_free(void *ptr){
     //get size and data pointer of node
     size_t size = n.size;
     uint8_t* dataPtr = n.data;
-    //to ensure pattern is properly aligned
-    int x = (dataPtr - heapPtr) % 5;
-    //overwrite node data with 5 byte pattern.
-    //if x = 0 -> 0,1,2,3,4; x = 1 -> 1,2,3,4,0
-    for (int i=0; i<size; i+=5){
-        *(dataPtr+i) = pattern[(0+x)%5];
-        *(dataPtr+i+1) = pattern[(1+x)%5];
-        *(dataPtr+i+2) = pattern[(2+x)%5];
-        *(dataPtr+i+3) = pattern[(3+x)%5];
-        *(dataPtr+i+4) = pattern[(4+x)%5];
-    }
+    //overwrite data with 5B pattern
+    overwrite_data(dataPtr, size);
     //free node
     n.state = FREE;
     *nodePtr = n;//write back to heap
