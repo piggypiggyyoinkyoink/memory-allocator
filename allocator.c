@@ -21,6 +21,8 @@ static uint8_t *heapPtr;
 static uint8_t pattern[5];
 
 
+
+
 // Initialize the allocator over a provided memory block.
 // Returns 0 on success, non-zero on failure.
 int mm_init(uint8_t *heap, size_t heap_size){
@@ -74,28 +76,11 @@ int mm_init(uint8_t *heap, size_t heap_size){
     *heapContentsPtr = heapNode;
 
     printf("\nSIZE OF NODE: %d",sizeof(heapNode));
-    
-    
-    /* Example code:
-    
-    
-    //update data for node
-    *(int *)heapContentsPtr->data = 42;
-    (*(char *)heapContentsPtr->data) ='a';
-
-    //write to heap
-    struct Node *test = (struct Node *) heap;
-    *test = head;
-
-
-    //read from heap
-    struct Node *nnn = (struct Node *) heap;
-    printf("DINGUS: %d\n", nnn->size);
-    */
-
     printf("\nSIZE: %d",head.next->size);
     return 0;
 };
+
+
 
 
 void resize_node(struct Node* nodePtr, size_t size){
@@ -127,6 +112,9 @@ void resize_node(struct Node* nodePtr, size_t size){
     *newNodePtr = newNode;
     *nextNodePtr = nextNode;
 }
+
+
+
 
 // Allocate a block with ALIGN-byte aligned payload. Returns
 // NULL on failure.
@@ -165,6 +153,9 @@ void *mm_malloc(size_t size){
     return NULL;
 };
 
+
+
+
 // Safely read data from an allocated block starting at offset bytes into buf.
 // Returns the number of bytes read, or -1 if corruption or invalid pointer detected.
 int mm_read(void *ptr, size_t offset, void *buf, size_t len){
@@ -185,11 +176,14 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len){
     int numBytes = 0;
     for (size_t i = offset; i<(size-offset); i++){//should this be len instead of size-offset??
         *(buff+i) = *(dataPtr+i);
-        printf("\n%d", *(buff+i));
+        //printf("\n%d", *(buff+i));
         numBytes++;
     }
     return numBytes;
 };
+
+
+
 
 // Safely write data into an allocated block starting at offset bytes from src.
 // Returns the number of bytes written, or -1 if corruption or invalid pointer detected.
@@ -216,6 +210,9 @@ int mm_write(void *ptr, size_t offset, const void *src, size_t len){
     return numBytes;
 };
 
+
+
+
 //doesnt actually delete the node but updates the pointers of previous and next nodes so that logically it ceases to exist.
 void delete_node(struct Node* nodePtr){
     struct Node* currentNodePtr = nodePtr;
@@ -238,6 +235,9 @@ void delete_node(struct Node* nodePtr){
     return;
 }
 
+
+
+
 //overwrite a node's data with the 5 byte pattern
 void overwrite_data(uint8_t* dataPtr, size_t size){
     //to ensure pattern is properly aligned
@@ -252,6 +252,9 @@ void overwrite_data(uint8_t* dataPtr, size_t size){
         *(dataPtr+i+4) = pattern[(4+x)%5];
     }
 }
+
+
+
 
 void merge_node(struct Node* nodePtr){
     struct Node* currentNodePtr = nodePtr;
@@ -299,6 +302,7 @@ void merge_node(struct Node* nodePtr){
 
 
 
+
 // Free a previously-allocated pointer (ignore NULL).
 // Must detect double-free.
 void mm_free(void *ptr){
@@ -324,6 +328,10 @@ void mm_free(void *ptr){
     n.state = FREE;
     *nodePtr = n;//write back to heap
 };
+
+
+
+
 
 int main(){
     uint8_t *b = malloc(800*sizeof(uint8_t));
