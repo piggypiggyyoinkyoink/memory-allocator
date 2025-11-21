@@ -180,6 +180,11 @@ int mm_write(void *ptr, size_t offset, const void *src, size_t len){
 // Free a previously-allocated pointer (ignore NULL).
 // Must detect double-free.
 void mm_free(void *ptr){
+    //check for null pointer
+    if (ptr == NULL){
+        //fuck off if null
+        return;
+    }
     //Get the node
     struct Node* nodePtr = ptr;
     struct Node n = *nodePtr;
