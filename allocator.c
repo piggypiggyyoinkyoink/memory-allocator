@@ -362,7 +362,7 @@ int main(){
     void* ptr4 = mm_malloc(100);
 
     void* buf[256];
-    void* src[] = {6, 7, 6, 9};
+    void* src[100] = {6};
     int y = mm_write(ptr4, 0, src, 4);
     printf("\n Y IS: %d", y);
 
