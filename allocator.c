@@ -177,6 +177,27 @@ int mm_write(void *ptr, size_t offset, const void *src, size_t len){
     printf("Hello World");
 };
 
+//doesnt actually delete the node but updates the pointers of previous and next nodes so that logically it ceases to exist.
+void delete_node(struct Node* nodePtr){
+    struct Node* currentNodePtr = nodePtr;
+    struct Node currentNode = *nodePtr;
+    //dont delete non-free nodes
+    if (currentNode.state != FREE){
+        return;
+    }
+    //get prev and next nodes
+    struct Node* nextNodePtr = currentNode.next;
+    struct Node nextNode = *nextNodePtr;
+    struct Node* prevNodePtr = currentNode.prev;
+    struct Node prevNode = *prevNodePtr;
+    //update pointers to bypass deleted node.
+    nextNode.prev = prevNodePtr;
+    prevNode.next = nextNodePtr;
+    //write to heap
+    *prevNodePtr = prevNode;
+    *nextNodePtr = nextNode;
+    return;
+}
 
 //overwrite a node's data with the 5 byte pattern
 void overwrite_data(uint8_t* dataPtr, size_t size){
@@ -184,7 +205,7 @@ void overwrite_data(uint8_t* dataPtr, size_t size){
     int x = (dataPtr - heapPtr) % 5;
     //overwrite node data with 5 byte pattern.
     //if x = 0 -> 0,1,2,3,4; x = 1 -> 1,2,3,4,0
-    for (int i=0; i<size; i+=5){
+    for (size_t i=0; i<size-4; i+=5){//idk if i should be int or size_t here
         *(dataPtr+i) = pattern[(0+x)%5];
         *(dataPtr+i+1) = pattern[(1+x)%5];
         *(dataPtr+i+2) = pattern[(2+x)%5];
@@ -192,6 +213,52 @@ void overwrite_data(uint8_t* dataPtr, size_t size){
         *(dataPtr+i+4) = pattern[(4+x)%5];
     }
 }
+
+void merge_node(struct Node* nodePtr){
+    struct Node* currentNodePtr = nodePtr;
+    struct Node currentNode = *currentNodePtr;
+    struct Node* nextNodePtr = currentNode.next;
+    struct Node nextNode = *nextNodePtr;
+    struct Node* prevNodePtr = currentNode.prev;
+    struct Node prevNode = *prevNodePtr;
+    if (prevNode.state == FREE and nextNode.state == FREE){ //should probs use a separate function to check freeness that can be applied anywhere and takes bitflips into acc.
+        //get new size of merged node
+        size_t newSize = prevNode.size + currentNode.size + nextNode.size + 2*sizeof(struct Node);
+        //"delete" redundant nodes (just update prev and next ptrs)
+        delete_node(currentNodePtr);
+        delete_node(nextNodePtr);
+        //update size
+        prevNode.size = newSize;
+        //update heap
+        *prevNodePtr = prevNode;
+        //fill with 5B pattern
+        overwrite_data(prevNode.data, newSize);
+
+    }else if (prevNode.state == FREE){
+        //get new size of merged node
+        size_t newSize = prevNode.size + currentNode.size + sizeof(struct Node);
+        //"delete" redundant node (just update prev and next ptrs)
+        delete_node(currentNodePtr);
+        //update size
+        prevNode.size = newSize;
+        //updates heap
+        *prevNodePtr = prevNode;
+        //fill with 5B pattern
+        overwrite_data(prevNode.data, newSize);
+    }else if (nextNode.state == FREE){
+        size_t newSize = currentNode.size + nextNode.size + sizeof(struct Node);
+        delete_node(nextNodePtr);
+        currentNode.size = newSize;
+        *currentNodePtr = currentNode;
+        overwrite_data(currentNode.data, newSize);
+    }else{
+        //if no merging to be done, just overwrite with 5B pattern
+        overwrite_data(currentNode.data, currentNode.size);
+    }
+    return;
+}
+
+
 
 // Free a previously-allocated pointer (ignore NULL).
 // Must detect double-free.
@@ -212,13 +279,13 @@ void mm_free(void *ptr){
     //get size and data pointer of node
     size_t size = n.size;
     uint8_t* dataPtr = n.data;
-    //overwrite data with 5B pattern
-    overwrite_data(dataPtr, size);
+    //Merge with adjacent frees and overwrite data with 5B pattern
+    merge_node(nodePtr);
     //free node
     n.state = FREE;
     *nodePtr = n;//write back to heap
 
-    //TODO: merge node with adjacent free nodes, and overwrite the merged node's metadata with the 5B pattern.
+    
 };
 
 int main(){
@@ -243,10 +310,11 @@ int main(){
     mm_init(b, 800);
 
     void* ptr = mm_malloc(76);
-    void* ptr2 = mm_malloc(7);
+    void* ptr2 = mm_malloc(76);
     void* ptr3 = mm_malloc(700);
     mm_free(ptr);
-    void* ptr4 = mm_malloc(76);
+    mm_free(ptr2);
+    void* ptr4 = mm_malloc(100);
 
     //reading from the heap outside the init function
     /*
