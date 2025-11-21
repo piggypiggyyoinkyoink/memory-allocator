@@ -173,6 +173,9 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len){
     uint8_t* dataPtr = (uint8_t*)n.data;
     uint8_t* buff = (uint8_t*)buf;
     size_t size = n.size;
+    if (n.state != UNFREE){
+        return -1;
+    }
     int numBytes = 0;
     for (size_t i = offset; i<(size-offset); i++){//should this be len instead of size-offset??
         *(buff+i) = *(dataPtr+i);
