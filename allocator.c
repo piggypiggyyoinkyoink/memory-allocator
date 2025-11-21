@@ -168,7 +168,17 @@ void *mm_malloc(size_t size){
 // Safely read data from an allocated block starting at offset bytes into buf.
 // Returns the number of bytes read, or -1 if corruption or invalid pointer detected.
 int mm_read(void *ptr, size_t offset, void *buf, size_t len){
-    printf("Hello World");
+    struct Node* nodePtr = ptr;
+    struct Node n = *nodePtr;
+    uint8_t* dataPtr = (uint8_t*)n.data;
+    uint8_t* buff = (uint8_t*)buf;
+    size_t size = n.size;
+    int numBytes = 0;
+    for (size_t i = offset; i<(size-offset); i++){//should this be len instead of size-offset??
+        *(buff+i) = *(dataPtr+i);
+        numBytes++;
+    }
+    return numBytes;
 };
 
 // Safely write data into an allocated block starting at offset bytes from src.
@@ -284,8 +294,6 @@ void mm_free(void *ptr){
     //free node
     n.state = FREE;
     *nodePtr = n;//write back to heap
-
-    
 };
 
 int main(){
@@ -309,13 +317,15 @@ int main(){
     // run init
     mm_init(b, 800);
 
-    void* ptr = mm_malloc(76);
-    void* ptr2 = mm_malloc(76);
+    void* ptr = mm_malloc(70);
+    void* ptr2 = mm_malloc(70);
     void* ptr3 = mm_malloc(700);
     mm_free(ptr);
     mm_free(ptr2);
     void* ptr4 = mm_malloc(100);
-
+    void* buf[256];
+    int x = mm_read(ptr4, 0, buf, 256);
+    printf("\n X IS: %d", x);
     //reading from the heap outside the init function
     /*
     //get head node
