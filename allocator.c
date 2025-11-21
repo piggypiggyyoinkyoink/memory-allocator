@@ -173,15 +173,19 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len){
     uint8_t* dataPtr = (uint8_t*)n.data;
     uint8_t* buff = (uint8_t*)buf;
     size_t size = n.size;
+    //nuh uh if block is free or doesnt exist
     if (n.state != UNFREE){
         return -1;
     }
+    //nuh uh if buf isnt big enough to store the data
     if (len < (size-offset)){
         return -1;
     }
+    //read data 1 byte at a time
     int numBytes = 0;
     for (size_t i = offset; i<(size-offset); i++){//should this be len instead of size-offset??
         *(buff+i) = *(dataPtr+i);
+        printf("\n%d", *(buff+i));
         numBytes++;
     }
     return numBytes;
@@ -190,7 +194,26 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len){
 // Safely write data into an allocated block starting at offset bytes from src.
 // Returns the number of bytes written, or -1 if corruption or invalid pointer detected.
 int mm_write(void *ptr, size_t offset, const void *src, size_t len){
-    printf("Hello World");
+    struct Node* nodePtr = ptr;
+    struct Node n = *nodePtr;
+    uint8_t* dataPtr = (uint8_t*)n.data;
+    uint8_t* source = (uint8_t*)src;
+    size_t size = n.size;
+    //nuh uh if block is free or doesnt exist
+    if (n.state != UNFREE){
+        return -1;
+    }
+    //nuh uh if len is bigger than the size of the block
+    if (len > (size-offset)){
+        return -1;
+    }
+    //write data 1 byte at a time
+    int numBytes = 0;
+    for (size_t i = offset; i<(size-offset); i++){//should this be len instead of size-offset??
+        *(dataPtr+i) = *(source+i);
+        numBytes++;
+    }
+    return numBytes;
 };
 
 //doesnt actually delete the node but updates the pointers of previous and next nodes so that logically it ceases to exist.
@@ -329,7 +352,12 @@ int main(){
     mm_free(ptr);
     mm_free(ptr2);
     void* ptr4 = mm_malloc(100);
+
     void* buf[256];
+    void* src[] = {6, 7, 6, 9};
+    int y = mm_write(ptr4, 0, src, 4);
+    printf("\n Y IS: %d", y);
+
     int x = mm_read(ptr4, 0, buf, 256);
     printf("\n X IS: %d", x);
     //reading from the heap outside the init function
