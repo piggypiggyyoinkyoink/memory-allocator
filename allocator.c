@@ -180,7 +180,28 @@ int mm_write(void *ptr, size_t offset, const void *src, size_t len){
 // Free a previously-allocated pointer (ignore NULL).
 // Must detect double-free.
 void mm_free(void *ptr){
-    printf("Hello World");
+    //Get the node
+    struct Node* nodePtr = ptr;
+    struct Node n = *nodePtr;
+    //check for double free
+    if (n.state != UNFREE){
+        printf("\nWhoopsie");
+        return;
+    }
+    size_t size = n.size;
+    uint8_t* dataPtr = n.data;
+    int x = (dataPtr - heapPtr) % 5;
+    //if x = 0 -> 0,1,2,3,4; x = 1 -> 1,2,3,4,0
+    for (int i=0; i<size; i+=5){
+        *(dataPtr+i) = pattern[(0+x)%5];
+        *(dataPtr+i+1) = pattern[(1+x)%5];
+        *(dataPtr+i+2) = pattern[(2+x)%5];
+        *(dataPtr+i+3) = pattern[(3+x)%5];
+        *(dataPtr+i+4) = pattern[(4+x)%5];
+    }
+
+    n.state = FREE;
+    *nodePtr = n;//write back to heap
 
 };
 
@@ -208,6 +229,9 @@ int main(){
     void* ptr = mm_malloc(76);
     void* ptr2 = mm_malloc(7);
     void* ptr3 = mm_malloc(700);
+    mm_free(ptr);
+    void* ptr4 = mm_malloc(76);
+
     //reading from the heap outside the init function
     /*
     //get head node
