@@ -45,9 +45,12 @@ int main(){
     void* ptr5 = mm_malloc(120);
 
     printf("\n\nAllocating ptr6");
-    void* ptr6 = mm_malloc(100);
+    void* ptr6 = mm_malloc(101);
     printf("\n\nFreeing ptr5");
     mm_free(ptr5);
+
+    printf("\n\nAllocating ptr8");
+    void* ptr8 = mm_malloc(560);
 
     printf("\n\nFreeing ptr6");
     mm_free(ptr6);
@@ -62,11 +65,10 @@ int main(){
 
     printf("\n\nFreeing ptr4");
     mm_free(ptr4);
-
     printf("\n\nFreeing ptr4 (double-free test)");
     mm_free(ptr4);
-
-    printf("HeapPtr: %p, PTR: %p, ptr2: %p, ptr4: %p, ptr5: %p", b, ptr, ptr2, ptr4, ptr5);
+    mm_free((void*)2);
+    printf("\nHeapPtr: %p, PTR: %p, ptr2: %p, ptr4: %p, ptr5: %p", b, ptr, ptr2, ptr4, ptr5);
     free(b);
     return 0;
 }
