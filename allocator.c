@@ -29,7 +29,7 @@ int mm_init(uint8_t *heap, size_t heap_size){
     //initialise head and ass
     head.size = 0; head.state = UNFREE; head.prev = NULL; head.next = NULL;
     ass.size = 0; ass.state = UNFREE; ass.prev = NULL; ass.next = NULL;
-    heap_size = heap_size - (heap_size % 40);//alignify the heap to 40 bytes to prevent any oddly sized memory blocks from materialising
+    //heap_size = heap_size - (heap_size % 40);//alignify the heap to 40 bytes to prevent any oddly sized memory blocks from materialising
     if (heap_size < (3*sizeof(struct Node))){
         //not enough heap space to do anything
         printf("Uh oh");
@@ -129,6 +129,7 @@ void *mm_malloc(size_t size){
     struct Node currentNode= *currentNodePtr;
     //check all nodes until we find a free one of sufficient size, or reach ass
     while ((not end) and (not found)){
+        printf("\n CURRENT NODE SIZE: %zu", currentNode.size);
         if (currentNode.state == FREE and currentNode.size >= size){
             //resize and allocate this node
             printf("\nMEMORY BLOCK FOUND");
@@ -362,8 +363,3 @@ void mm_free(void *ptr){
     printf("\nSUCCESSFULLY FREED BLOCK OF SIZE %zu", size);
     return;
 };
-
-
-
-
-
