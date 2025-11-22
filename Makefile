@@ -1,8 +1,8 @@
 
 all:
-	gcc -Wall -Wextra -fPIC -c allocator.c -o allocator.o
+	gcc -fPIC -c allocator.c -o allocator.o
 	gcc -shared allocator.o -o liballocator.so
-	gcc -Wall -Wextra runme.c ./liballocator.so -o runme 
+	gcc runme.c ./liballocator.so -o runme 
 
 runme:
 	gcc -Wall -Wextra runme.c ./liballocator.so -o runme 

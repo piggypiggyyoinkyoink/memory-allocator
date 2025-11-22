@@ -26,28 +26,26 @@ int main(){
     void* ptr = mm_malloc(70);
     void* ptr2 = mm_malloc(70);
     void* ptr3 = mm_malloc(700);
+
+    printf("\n\nFreeing ptr");
     mm_free(ptr);
+
+    printf("\n\nFreeing ptr2");
     mm_free(ptr2);
     void* ptr4 = mm_malloc(100);
-
     void* buf[256];
-    void* src[100] = {6};
+    int arr[100] = {6};
+    void* src = arr;
     int y = mm_write(ptr4, 0, src, 4);
     printf("\n WRITTEN DATA: %d", y);
 
     int x = mm_read(ptr4, 0, buf, 256);
     printf("\n READ DATA: %d", x);
-    //reading from the heap outside the init function
-    /*
-    //get head node
-    struct Node *nnn = (struct Node *) heapPtr;
-    struct Node node = *nnn;
 
-    //print data stored in next node
-    printf("DINGUS: %d\n", *(int *)((node.next)->data));
-    printf("DINGUS: %c\n", *(char *)((node.next)->data));
+    printf("\nFreeing ptr4");
+    mm_free(ptr4);
 
-    */
+    
     free(b);
     return 0;
 }

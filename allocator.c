@@ -75,8 +75,8 @@ int mm_init(uint8_t *heap, size_t heap_size){
     *heapAssPtr = ass;
     *heapContentsPtr = heapNode;
 
-    printf("\nSIZE OF NODE: %d",sizeof(heapNode));
-    printf("\nSIZE: %d",head.next->size);
+    printf("\nSIZE OF NODE: %zu",sizeof(heapNode));
+    printf("\nSIZE OF HEAP: %zu",head.next->size);
     return 0;
 };
 
@@ -109,8 +109,8 @@ void resize_node(struct Node* nodePtr, size_t size){
     nextNode.prev = newNodePtr;
     //write to heap
     *nodePtr = n;
-    *newNodePtr = newNode;
-    *nextNodePtr = nextNode;
+    *newNodePtr = newNode; 
+    *nextNodePtr = nextNode; 
 }
 
 
@@ -119,7 +119,7 @@ void resize_node(struct Node* nodePtr, size_t size){
 // Allocate a block with ALIGN-byte aligned payload. Returns
 // NULL on failure.
 void *mm_malloc(size_t size){
-    printf("\nSIZE_MALLOC: %d", size);
+    printf("\nALLOCATING BLOCK OF SIZE %zu", size);
     uint8_t end = 0;
     uint8_t found = 0;
     //start at the first data node
@@ -129,28 +129,30 @@ void *mm_malloc(size_t size){
     while ((not end) and (not found)){
         if (currentNode.state == FREE and currentNode.size >= size){
             //resize and allocate this node
-            printf("\nLETS FUCKING GO");
+            printf("\nMEMORY BLOCK FOUND");
             currentNode.state = UNFREE; //unfree the node
             *currentNodePtr = currentNode;//write back to heap
-            if (currentNode.size > size ){
+            if (currentNode.size > size + sizeof(struct Node) ){
                 resize_node(currentNodePtr, size);//resize node so there is some heap left for everything else
             }
-            memset(currentNode.data, 0, size);
+            currentNode= *currentNodePtr;
+            memset(currentNode.data, 0, currentNode.size);
             found = 1;
+            printf("\nALLOCATION SUCCESSFUL");
             return currentNodePtr;
         }else if (currentNode.next == NULL){
             //no available nodes of sufficient size
             end = 1;
-            printf("\nNOPE");
+            printf("\nNO FREE MEMORY BLOCKS BIG ENOUGH");
             return NULL;
         }else{
             //try next node
             currentNodePtr = (struct Node *) currentNode.next;
             currentNode = *currentNodePtr;
-            printf("\nNEXT");
+            printf("\nNEXT BLOCK");
         }
     }
-    printf("Hello World");
+    printf("RETURNING NULL");
     return NULL;
 };
 
@@ -220,6 +222,7 @@ void delete_node(struct Node* nodePtr){
     struct Node currentNode = *nodePtr;
     //dont delete non-free nodes
     if (currentNode.state != FREE){
+        printf("CANNOT DELETE NON-FREE NODE");
         return;
     }
     //get prev and next nodes
@@ -227,6 +230,7 @@ void delete_node(struct Node* nodePtr){
     struct Node nextNode = *nextNodePtr;
     struct Node* prevNodePtr = currentNode.prev;
     struct Node prevNode = *prevNodePtr;
+
     //update pointers to bypass deleted node.
     nextNode.prev = prevNodePtr;
     prevNode.next = nextNodePtr;
@@ -245,13 +249,14 @@ void overwrite_data(uint8_t* dataPtr, size_t size){
     int x = (dataPtr - heapPtr) % 5;
     //overwrite node data with 5 byte pattern.
     //if x = 0 -> 0,1,2,3,4; x = 1 -> 1,2,3,4,0
-    for (size_t i=0; i<size-4; i+=5){//idk if i should be int or size_t here
+    for (size_t i=0; i<size-5; i+=5){//idk if i should be int or size_t here
         *(dataPtr+i) = pattern[(0+x)%5];
         *(dataPtr+i+1) = pattern[(1+x)%5];
         *(dataPtr+i+2) = pattern[(2+x)%5];
         *(dataPtr+i+3) = pattern[(3+x)%5];
         *(dataPtr+i+4) = pattern[(4+x)%5];
     }
+    return;
 }
 
 
@@ -264,12 +269,13 @@ void merge_node(struct Node* nodePtr){
     struct Node nextNode = *nextNodePtr;
     struct Node* prevNodePtr = currentNode.prev;
     struct Node prevNode = *prevNodePtr;
-    if (prevNode.state == FREE and nextNode.state == FREE){ //should probs use a separate function to check freeness that can be applied anywhere and takes bitflips into acc.
+    if ((prevNode.state == FREE) and (nextNode.state == FREE) and (prevNode.prev != NULL) and (nextNode.next != NULL)){ //should probs use a separate function to check freeness that can be applied anywhere and takes bitflips into acc.
         //get new size of merged node
         size_t newSize = prevNode.size + currentNode.size + nextNode.size + 2*sizeof(struct Node);
         //"delete" redundant nodes (just update prev and next ptrs)
         delete_node(currentNodePtr);
         delete_node(nextNodePtr);
+        prevNode = *prevNodePtr;
         //update size
         prevNode.size = newSize;
         //update heap
@@ -282,6 +288,7 @@ void merge_node(struct Node* nodePtr){
         size_t newSize = prevNode.size + currentNode.size + sizeof(struct Node);
         //"delete" redundant node (just update prev and next ptrs)
         delete_node(currentNodePtr);
+        prevNode = *prevNodePtr;//IMPORTANT: delete_node() changes the pointers of the nodes on the heap so these changes need to be updated in the prevNode variable so they arent overwritten
         //update size
         prevNode.size = newSize;
         //updates heap
@@ -291,6 +298,7 @@ void merge_node(struct Node* nodePtr){
     }else if (nextNode.state == FREE){
         size_t newSize = currentNode.size + nextNode.size + sizeof(struct Node);
         delete_node(nextNodePtr);
+        currentNode = *currentNodePtr;
         currentNode.size = newSize;
         *currentNodePtr = currentNode;
         overwrite_data(currentNode.data, newSize);
@@ -310,25 +318,30 @@ void mm_free(void *ptr){
     //check for null pointer
     if (ptr == NULL){
         //fuck off if null
+        printf("\nCANNOT FREE NULL POINTER");
         return;
     }
+    
     //Get the node
     struct Node* nodePtr = ptr;
     struct Node n = *nodePtr;
     //check for double free
     if (n.state != UNFREE){
-        printf("\nWhoopsie");
+        printf("\nCANNOT FREE NON-UNFREE NODE");
         return;
     }
     //get size and data pointer of node
     size_t size = n.size;
     uint8_t* dataPtr = n.data;
+
+    //free node BEFORE calling merge_node() - IMPORTANT
+    n.state = FREE;
+    *nodePtr = n; //update heap
+
     //Merge with adjacent frees and overwrite data with 5B pattern
     merge_node(nodePtr);
-    //free node
-    n.state = FREE;
-    *nodePtr = n;//write back to heap
-    printf("\nFREED BLOCK OF SIZE %d", size);
+    
+    printf("\nFREED BLOCK OF SIZE %zu", size);
     return;
 };
 
