@@ -29,7 +29,7 @@ int mm_init(uint8_t *heap, size_t heap_size){
     //initialise head and ass
     head.size = 0; head.state = UNFREE; head.prev = NULL; head.next = NULL;
     ass.size = 0; ass.state = UNFREE; ass.prev = NULL; ass.next = NULL;
-
+    heap_size = heap_size - (heap_size % 40);
     if (heap_size < (3*sizeof(struct Node))){
         //not enough heap space to do anything
         printf("Uh oh");
@@ -120,6 +120,7 @@ void resize_node(struct Node* nodePtr, size_t size){
 // NULL on failure.
 void *mm_malloc(size_t size){
     printf("\nALLOCATING BLOCK OF SIZE %zu", size);
+    size_t aligned_size = size + (40 - (size%40));
     uint8_t end = 0;
     uint8_t found = 0;
     //start at the first data node
@@ -132,12 +133,14 @@ void *mm_malloc(size_t size){
             printf("\nMEMORY BLOCK FOUND");
             currentNode.state = UNFREE; //unfree the node
             *currentNodePtr = currentNode;//write back to heap
-            if (currentNode.size > size + sizeof(struct Node) ){
-                resize_node(currentNodePtr, size);//resize node so there is some heap left for everything else
+            if (currentNode.size > aligned_size + sizeof(struct Node) ){
+                resize_node(currentNodePtr, aligned_size);//resize node so there is some heap left for everything else
             }
             currentNode= *currentNodePtr;
+            currentNode.size = size;
             memset(currentNode.data, 0, currentNode.size);
             found = 1;
+            *currentNodePtr = currentNode;
             printf("\nALLOCATION SUCCESSFUL");
             return currentNodePtr;
         }else if (currentNode.next == NULL){
