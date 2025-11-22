@@ -135,6 +135,7 @@ void *mm_malloc(size_t size){
             if (currentNode.size > size ){
                 resize_node(currentNodePtr, size);//resize node so there is some heap left for everything else
             }
+            memset(currentNode.data, 0, size);
             found = 1;
             return currentNodePtr;
         }else if (currentNode.next == NULL){
@@ -327,6 +328,8 @@ void mm_free(void *ptr){
     //free node
     n.state = FREE;
     *nodePtr = n;//write back to heap
+    printf("\nFREED BLOCK OF SIZE %d", size);
+    return;
 };
 
 

@@ -33,10 +33,10 @@ int main(){
     void* buf[256];
     void* src[100] = {6};
     int y = mm_write(ptr4, 0, src, 4);
-    printf("\n Y IS: %d", y);
+    printf("\n WRITTEN DATA: %d", y);
 
     int x = mm_read(ptr4, 0, buf, 256);
-    printf("\n X IS: %d", x);
+    printf("\n READ DATA: %d", x);
     //reading from the heap outside the init function
     /*
     //get head node
