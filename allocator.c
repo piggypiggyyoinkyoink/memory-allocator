@@ -113,6 +113,7 @@ void resize_node(struct Node* nodePtr, size_t size){
     *nodePtr = n;
     *newNodePtr = newNode; 
     *nextNodePtr = nextNode; 
+    return;
 }
 
 
@@ -314,7 +315,7 @@ void merge_node(struct Node* nodePtr){
     struct Node prevNode = *prevNodePtr;
     if ((prevNode.state == FREE) and (nextNode.state == FREE) and (prevNode.prev != NULL) and (nextNode.next != NULL)){ //should probs use a separate function to check freeness that can be applied anywhere and takes bitflips into acc.
         //get new size of merged node
-        size_t newSize = prevNode.size + currentNode.size + nextNode.size + 2*sizeof(struct Node);
+        size_t newSize = (size_t)((uint8_t*)nextNode.next - (uint8_t*)prevNode.data);
         //"delete" redundant nodes (just update prev and next ptrs)
         delete_node(currentNodePtr);
         delete_node(nextNodePtr);
@@ -328,7 +329,8 @@ void merge_node(struct Node* nodePtr){
 
     }else if (prevNode.state == FREE){
         //get new size of merged node
-        size_t newSize = prevNode.size + currentNode.size + sizeof(struct Node);
+        size_t newSize = (size_t)((uint8_t*)currentNode.next - (uint8_t*)prevNode.data);
+
         //"delete" redundant node (just update prev and next ptrs)
         delete_node(currentNodePtr);
         prevNode = *prevNodePtr;//IMPORTANT: delete_node() changes the pointers of the nodes on the heap so these changes need to be updated in the prevNode variable so they arent overwritten
@@ -339,7 +341,8 @@ void merge_node(struct Node* nodePtr){
         //fill with 5B pattern
         overwrite_data(prevNode.data, newSize);
     }else if (nextNode.state == FREE){
-        size_t newSize = currentNode.size + nextNode.size + sizeof(struct Node);
+        size_t newSize = (size_t)((uint8_t*)nextNode.next - (uint8_t*)currentNode.data);
+
         delete_node(nextNodePtr);
         currentNode = *currentNodePtr;
         currentNode.size = newSize;
@@ -365,13 +368,21 @@ void mm_free(void *ptr){
         return;
     }
     //return if pointer is invalid
-    if (((uint8_t*)ptr) < heapPtr or ((uint8_t*)ptr) >= (heapPtr + heapSize)){
+    if (((uint8_t*)ptr) < (heapPtr+sizeof(struct Node)) or ((uint8_t*)ptr) >= (heapPtr + heapSize - sizeof(struct Node))){
+        printf("\nINVALID POINTER");
         return;
     }
     
     //Get the node
     struct Node* nodePtr = ptr;
     struct Node n = *nodePtr;
+
+    //return if prev or next pointers are invalid
+    if (((uint8_t*)n.prev) < (heapPtr) or ((uint8_t*)n.prev) >= (heapPtr + heapSize) or ((uint8_t*)n.next) < (heapPtr) or ((uint8_t*)n.next) >= (heapPtr + heapSize)){
+        printf("\nINVALID POINTER");
+        return;
+    }
+
     //check for double free
     if (n.state != UNFREE){
         printf("\nCANNOT FREE NON-UNFREE NODE");
