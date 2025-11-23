@@ -59,8 +59,9 @@ int mm_init(uint8_t *heap, size_t heap_size){
     struct Node *heapHeadPtr = (struct Node *) heap;
     
     //put the ass  at the end of the heap
-    struct Node *heapAssPtr = (struct Node *) (((uint8_t *)heap + (heap_size-1)) - sizeof(ass) );
-    
+    //struct Node *heapAssPtr = (struct Node *) (((uint8_t *)heap + (heap_size-1)) - sizeof(ass) );
+    struct Node *heapAssPtr = (struct Node *)((uint8_t *)heap + heap_size - sizeof(struct Node));
+
     //put heapNode in the middle
     struct Node *heapContentsPtr = (struct Node *) ((uint8_t *)heap + sizeof(head));
     
@@ -121,7 +122,15 @@ void resize_node(struct Node* nodePtr, size_t size){
 // NULL on failure.
 void *mm_malloc(size_t size){
     printf("\nALLOCATING BLOCK OF SIZE %zu", size);
-    size_t aligned_size = size + (40 - (size%40));
+    if (size < 1){
+        return NULL;
+    }
+    size_t aligned_size;
+    if (size %40 != 0){
+        aligned_size = size + (40 - (size%40));
+    }else{
+        aligned_size = size;
+    }
     uint8_t end = 0;
     uint8_t found = 0;
     //start at the first data node
@@ -170,6 +179,7 @@ void *mm_malloc(size_t size){
 int mm_read(void *ptr, size_t offset, void *buf, size_t len){
     //return if pointer invalid
     if (((uint8_t*)ptr) < heapPtr or ((uint8_t*)ptr) > (heapPtr + heapSize)){
+        printf("INVALID POINTER IN MM_READ");
         return -1;
     }
     struct Node* nodePtr = ptr;
@@ -179,14 +189,18 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len){
     size_t size = n.size;
     //nuh uh if block is free or doesnt exist
     if (n.state != UNFREE){
+        printf("CANNOT WRITE TO FREE BLOCK");
         return -1;
     }
     //nuh uh if buf isnt big enough to store the data
-    if (len < (size-offset)){
+    /*if (len < (size-offset)){
+        printf("BUF TOO SMALL");
+
         return -1;
-    }
+    }*/
     //read data 1 byte at a time
     int numBytes = 0;
+    //for (size_t i = offset; i<(size-offset); i++){//should this be len instead of size-offset??
     for (size_t i = offset; i<(size-offset); i++){//should this be len instead of size-offset??
         *(buff+i) = *(dataPtr+i);
         //printf("\n%d", *(buff+i));
@@ -203,6 +217,7 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len){
 int mm_write(void *ptr, size_t offset, const void *src, size_t len){
     //return if pointer invalid
     if (((uint8_t*)ptr) < heapPtr or ((uint8_t*)ptr) > (heapPtr + heapSize)){
+        printf("INVALID POINTER IN MM_WRITE");
         return -1;
     }
 
@@ -213,15 +228,20 @@ int mm_write(void *ptr, size_t offset, const void *src, size_t len){
     size_t size = n.size;
     //nuh uh if block is free or doesnt exist
     if (n.state != UNFREE){
+        printf("CANNOT WRITE TO FREE BLOCK");
+
         return -1;
     }
     //nuh uh if len is bigger than the size of the block
     if (len > (size-offset)){
+        printf("BLOCK TOO SMALL");
+
         return -1;
     }
     //write data 1 byte at a time
     int numBytes = 0;
-    for (size_t i = offset; i<(size-offset); i++){//should this be len instead of size-offset??
+    //for (size_t i = offset; i<(size-offset); i++){//should this be len instead of size-offset??
+    for (size_t i = offset; i<(len); i++){//should this be len instead of size-offset??
         *(dataPtr+i) = *(source+i);
         numBytes++;
     }
@@ -261,18 +281,26 @@ void delete_node(struct Node* nodePtr){
 //overwrite a node's data with the 5 byte pattern
 void overwrite_data(uint8_t* dataPtr, size_t size){
     //to ensure pattern is properly aligned
-    int x = (dataPtr - heapPtr) % 5;
+    //int x = (dataPtr - heapPtr) % 5;
     //overwrite node data with 5 byte pattern.
     //if x = 0 -> 0,1,2,3,4; x = 1 -> 1,2,3,4,0
+    /*
     for (size_t i=0; i<size-5; i+=5){//idk if i should be int or size_t here
         *(dataPtr+i) = pattern[(0+x)%5];
         *(dataPtr+i+1) = pattern[(1+x)%5];
         *(dataPtr+i+2) = pattern[(2+x)%5];
         *(dataPtr+i+3) = pattern[(3+x)%5];
         *(dataPtr+i+4) = pattern[(4+x)%5];
+    }*/
+    if (size == 0){
+        return;
+    } 
+    int x = ((intptr_t)dataPtr - (intptr_t)heapPtr) % 5;
+    for (size_t i = 0; i < size; ++i) {
+        dataPtr[i] = pattern[(i + x) % 5];
     }
-    return;
-}
+        return;
+    }
 
 
 
@@ -337,7 +365,7 @@ void mm_free(void *ptr){
         return;
     }
     //return if pointer is invalid
-    if (((uint8_t*)ptr) < heapPtr or ((uint8_t*)ptr) > (heapPtr + heapSize)){
+    if (((uint8_t*)ptr) < heapPtr or ((uint8_t*)ptr) >= (heapPtr + heapSize)){
         return;
     }
     
