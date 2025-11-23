@@ -180,7 +180,7 @@ void *mm_malloc(size_t size){
 int mm_read(void *ptr, size_t offset, void *buf, size_t len){
     //return if pointer invalid
     if (((uint8_t*)ptr) < heapPtr or ((uint8_t*)ptr) > (heapPtr + heapSize)){
-        printf("INVALID POINTER IN MM_READ");
+        printf("\nINVALID POINTER IN MM_READ");
         return -1;
     }
     struct Node* nodePtr = ptr;
@@ -201,8 +201,11 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len){
     }*/
     //read data 1 byte at a time
     int numBytes = 0;
+    //apply offset
+    dataPtr += offset;
+
     //for (size_t i = offset; i<(size-offset); i++){//should this be len instead of size-offset??
-    for (size_t i = offset; i<(size-offset); i++){//should this be len instead of size-offset??
+    for (size_t i = 0; i<len; i++){//should this be len instead of size-offset??
         *(buff+i) = *(dataPtr+i);
         //printf("\n%d", *(buff+i));
         numBytes++;
@@ -218,7 +221,7 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len){
 int mm_write(void *ptr, size_t offset, const void *src, size_t len){
     //return if pointer invalid
     if (((uint8_t*)ptr) < heapPtr or ((uint8_t*)ptr) > (heapPtr + heapSize)){
-        printf("INVALID POINTER IN MM_WRITE");
+        printf("\nINVALID POINTER IN MM_WRITE");
         return -1;
     }
 
@@ -229,20 +232,23 @@ int mm_write(void *ptr, size_t offset, const void *src, size_t len){
     size_t size = n.size;
     //nuh uh if block is free or doesnt exist
     if (n.state != UNFREE){
-        printf("CANNOT WRITE TO FREE BLOCK");
+        printf("\nCANNOT WRITE TO FREE BLOCK");
 
         return -1;
     }
     //nuh uh if len is bigger than the size of the block
-    if (len > (size-offset)){
-        printf("BLOCK TOO SMALL");
+    if ((len > (size-offset)) or (offset > size)){
+        printf("\nBLOCK TOO SMALL");
 
         return -1;
     }
     //write data 1 byte at a time
     int numBytes = 0;
     //for (size_t i = offset; i<(size-offset); i++){//should this be len instead of size-offset??
-    for (size_t i = offset; i<(len); i++){//should this be len instead of size-offset??
+
+    //apply offset
+    dataPtr += offset;
+    for (size_t i = 0; i<(len); i++){//should this be len instead of size-offset??
         *(dataPtr+i) = *(source+i);
         numBytes++;
     }
@@ -258,7 +264,7 @@ void delete_node(struct Node* nodePtr){
     struct Node currentNode = *nodePtr;
     //dont delete non-free nodes
     if (currentNode.state != FREE){
-        printf("CANNOT DELETE NON-FREE NODE");
+        printf("\nCANNOT DELETE NON-FREE NODE");
         return;
     }
     //get prev and next nodes

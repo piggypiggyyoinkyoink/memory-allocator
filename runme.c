@@ -6,7 +6,7 @@
 #include <string.h>
 // Helper for printing PASS/FAIL
 #define TEST(name, expr) do { \
-    printf("TEST %-40s : ", name); \
+    printf("\nTEST %-40s : ", name); \
     if (expr) printf("PASS\n"); \
     else      printf("FAIL\n"); \
 } while(0)
@@ -94,13 +94,15 @@ int main(){
     printf("\n[3] Testing write/read...\n");
 
     char msg[] = "Hello world!";
-    mm_write(a, 0, msg, sizeof(msg));
+    int numB1 = mm_write(a, 5, msg, sizeof(msg));
 
     char bufff[32];
     memset(bufff, 0, sizeof(bufff));
-    mm_read(a, 0,bufff, sizeof(msg));
-
-    TEST("\nmm_write/mm_read store correct data", strcmp(bufff, msg) == 0);
+    int numB2 = mm_read(a, 5,bufff, sizeof(msg));
+    printf("\nSIZEOF: %zu", sizeof(msg));
+    printf("\nNUMB1: %d", numB1);
+    printf("\nNUMB2: %d", numB2);
+    TEST("mm_write/mm_read store correct data", strcmp(bufff, msg) == 0);
 
     /* ----------------------------------------------------
        TEST 3: Allocate multiple blocks
@@ -110,8 +112,8 @@ int main(){
     void *b = mm_malloc(64);
     void *c = mm_malloc(128);
 
-    TEST("\nSecond alloc != NULL", b != NULL);
-    TEST("\nThird alloc != NULL", c != NULL);
+    TEST("Second alloc != NULL", b != NULL);
+    TEST("Third alloc != NULL", c != NULL);
 
     mm_write(b,0, "TESTING-123", 12);
 
@@ -119,7 +121,7 @@ int main(){
     memset(temp, 0, sizeof(temp));
     mm_read(b,0, temp, 12);
     puts(temp);
-    TEST("\nSecond block stores correct data", strcmp(temp, "TESTING-123") == 0);
+    TEST("Second block stores correct data", strcmp(temp, "TESTING-123") == 0);
 
     /* ----------------------------------------------------
        TEST 4: Free a block
@@ -127,7 +129,7 @@ int main(){
     printf("\n[5] Freeing blocks...\n");
 
     mm_free(b);
-    TEST("\nFree b (no crash)", 1);
+    TEST("Free b (no crash)", 1);
 
     /* ----------------------------------------------------
        TEST 5: Double-free detection
@@ -136,7 +138,7 @@ int main(){
 
     // Should print error internally, but not crash
     mm_free(b);
-    TEST("\nDouble-free does not crash", 1);
+    TEST("Double-free does not crash", 1);
 
     /* ----------------------------------------------------
        TEST 6: Adjacent block merging
@@ -149,7 +151,7 @@ int main(){
 
     // Now re-allocate a large block to see if merge worked
     void *big = mm_malloc(512);
-    TEST("\nAllocator merged free blocks (big alloc != NULL)", big != NULL);
+    TEST("Allocator merged free blocks (big alloc != NULL)", big != NULL);
     mm_free(big);
     /* ----------------------------------------------------
        TEST 7: Out-of-bounds write protection
@@ -171,7 +173,7 @@ int main(){
     mm_read(xx,0, rbuff, 16);
     mm_free(xx);
     // Not checking content — only checking no crash
-    TEST("\nOut-of-bounds write does not crash", 1);
+    TEST("Out-of-bounds write does not crash", 1);
 
     /* ----------------------------------------------------
        TEST 8: NULL pointer behavior
@@ -182,7 +184,7 @@ int main(){
     mm_write(NULL,0, "A", 1);           // should do nothing
     mm_read(NULL,0, rbuff, 16);         // should do nothing
 
-    TEST("\nNULL operations do not crash", 1);
+    TEST("NULL operations do not crash", 1);
 
     /* ----------------------------------------------------
        TEST 9: Allocate entire heap
@@ -190,7 +192,7 @@ int main(){
     printf("\n[10] Testing full-heap allocation...\n");
 
     void *big2 = mm_malloc(800 - 3 * 40);
-    TEST("\nLarge alloc after re-init", big2 != NULL);
+    TEST("Large alloc after freeing everything", big2 != NULL);
 
     printf("\n======== ALL TESTS COMPLETE ========\n");
     return 0;
