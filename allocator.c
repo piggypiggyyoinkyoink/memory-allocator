@@ -15,11 +15,17 @@ struct Node{
     struct Node *prev;  // pointer to previous block
     struct Node *next;  // pointer to next block
     void *data;  // pointer to data.
-    struct Node* clone1;
-    struct Node* clone2;
-    uint8_t checksum;
-    void *data2;
-    void *data3;
+    size_t size2;  // size of memory block
+    struct Node *prev2;  // pointer to previous block
+    struct Node *next2;  // pointer to next block
+    void *data2;  // pointer to data.
+    size_t size3;  // size of memory block
+    struct Node *prev3;  // pointer to previous block
+    struct Node *next3;  // pointer to next block
+    void *data3;  // pointer to data.
+    uint8_t a;
+    uint8_t b;
+    uint8_t c;
 };
 
 static struct Node head;
