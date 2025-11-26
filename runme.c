@@ -79,6 +79,7 @@ int main(){
     mm_free(ptr4);
     printf("\n\nFreeing ptr4 (double-free test)");
     mm_free(ptr4);
+    printf("\n\nFreeing invalid pointer");
     mm_free((void*)2);
     printf("\nHeapPtr: %p, PTR: %p, ptr2: %p, ptr4: %p, ptr5: %p", heap, ptr, ptr2, ptr4, ptr5);
     free(heap);

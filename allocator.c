@@ -23,7 +23,24 @@ static uint8_t *heapPtr;
 static uint8_t pattern[5];
 static size_t heapSize;
 
+int is_valid_pointer(void* ptr, int sentinels_valid){
+    if (sentinels_valid){
+        if (((uint8_t*)ptr) < (heapPtr) || ((uint8_t*)ptr) >= (heapPtr + heapSize-sizeof(struct Node))) {
+            //printf("\nINVALID POINTER");
+            return 0;
+        }else{
+            return 1;
+        }
+    }else{
+        if (((uint8_t*)ptr) < (heapPtr+sizeof(struct Node)) || ((uint8_t*)ptr) >= (heapPtr + heapSize - 2*sizeof(struct Node))) {
+            //printf("\nINVALID POINTER");
+            return 0;
+        }else{
+            return 1;
+        }
+    }
 
+}
 
 // Initialize the allocator over a provided memory block.
 // Returns 0 on success, non-zero on failure.
@@ -374,7 +391,7 @@ void mm_free(void *ptr) {
         return;
     }
     // return if pointer is invalid
-    if (((uint8_t*)ptr) < (heapPtr+sizeof(struct Node)) || ((uint8_t*)ptr) >= (heapPtr + heapSize - sizeof(struct Node))) {
+    if (!is_valid_pointer(ptr, 0)) {
         printf("\nINVALID POINTER");
         return;
     }
@@ -384,7 +401,7 @@ void mm_free(void *ptr) {
     struct Node n = *nodePtr;
 
     // return if prev or next pointers are invalid
-    if (((uint8_t*)n.prev) < (heapPtr) || ((uint8_t*)n.prev) >= (heapPtr + heapSize) || ((uint8_t*)n.next) < (heapPtr) || ((uint8_t*)n.next) >= (heapPtr + heapSize)) {
+    if (!is_valid_pointer(n.prev, 1) || !is_valid_pointer(n.next, 1)) {
         printf("\nINVALID POINTER");
         return;
     }
