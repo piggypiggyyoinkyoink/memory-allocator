@@ -117,11 +117,15 @@ int main(){
     TEST("Third alloc != NULL", c != NULL);
 
     mm_write(b,0, "TESTING-123", 12);
-
-    char temp[16];
+    printf("PENIS");
+    char temp[12];
     memset(temp, 0, sizeof(temp));
     mm_read(b,0, temp, 12);
-    puts(temp);
+    printf("PENIS");
+
+    //puts(temp);
+    printf("PENIS");
+
     TEST("Second block stores correct data", strcmp(temp, "TESTING-123") == 0);
 
     /* ----------------------------------------------------
@@ -196,5 +200,6 @@ int main(){
     TEST("Large alloc after freeing everything", big2 != NULL);
 
     printf("\n======== ALL TESTS COMPLETE ========\n");
+    free(heap);
     return 0;
 }
