@@ -11,7 +11,7 @@
     else      printf("FAIL\n"); \
 } while(0)
 int main(){
-    uint8_t *heap = malloc(1200*sizeof(uint8_t));
+    uint8_t *heap = malloc(8000*sizeof(uint8_t));
 
     //define 5-bit pattern
     uint8_t p1 = 0;
@@ -20,7 +20,7 @@ int main(){
     uint8_t p4 = 4;
     uint8_t p5 = 8;
     //set pattern in all bytes in heap
-    for (int i=0; i<800; i+=5){
+    for (int i=0; i<8000; i+=5){
         *(heap+i) = p1;
         *(heap+i+1) = p2;
         *(heap+i+2) = p3;
@@ -29,7 +29,7 @@ int main(){
     }
 
     // run init
-    mm_init(heap, 800);
+    mm_init(heap, 8000);
 
     printf("\n\nAllocating ptr");
     void* ptr = mm_malloc(70);
@@ -192,7 +192,7 @@ int main(){
     ---------------------------------------------------- */
     printf("\n[10] Testing full-heap allocation...\n");
 
-    void *big2 = mm_malloc(800 - 3 * 80);
+    void *big2 = mm_malloc(2000 - 3 * 80);
     TEST("Large alloc after freeing everything", big2 != NULL);
 
     printf("\n======== ALL TESTS COMPLETE ========\n");
