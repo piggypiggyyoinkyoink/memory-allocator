@@ -23,9 +23,8 @@ struct Node{
     struct Node *prev3;  // pointer to previous block
     struct Node *next3;  // pointer to next block
     void *data3;  // pointer to data.
-    uint8_t a;
-    uint8_t b;
-    uint8_t c;
+    uint8_t* a; //unused
+    uint8_t* b; //unused
 };
 
 static struct Node head;
@@ -56,8 +55,8 @@ int is_valid_pointer(void* ptr, int sentinels_valid){
 // Returns 0 on success, non-zero on failure.
 int mm_init(uint8_t *heap, size_t heap_size) {
     // initialise head and ass senitnels
-    head.size = 0; head.state = UNFREE; head.prev = NULL; head.next = NULL;
-    ass.size = 0; ass.state = UNFREE; ass.prev = NULL; ass.next = NULL;
+    head.size = head.size2 = head.size3 =0; head.state = UNFREE; head.prev = head.prev2 = head.prev3 = NULL; head.next = head.next2 = head.next3 = NULL;
+    ass.size = ass.size2 = ass.size3 = 0; ass.state = UNFREE; ass.prev = ass.prev2 = ass.prev3 = NULL; ass.next = ass.next2 = ass.next3 = NULL;
 
     if (heap_size < (3*sizeof(struct Node))) {
         // not enough heap space to do anything
@@ -80,8 +79,7 @@ int mm_init(uint8_t *heap, size_t heap_size) {
     // initialise initial data node
     struct Node heapNode = {(heap_size - 3*sizeof(struct Node)), FREE, NULL, NULL, (int*)heap };
     heapPtr = heap;
-
-
+    heapNode.size = heapNode.size2 = heapNode.size3 = (heap_size - 3*sizeof(struct Node));
     // Initialise pointers to nodes on the heap
 
     // put the head at the start of the heap
@@ -95,18 +93,18 @@ int mm_init(uint8_t *heap, size_t heap_size) {
     struct Node *heapContentsPtr = (struct Node *) ((uint8_t *)heap + sizeof(head));
 
     // set the prev and next pointers for each node
-    head.next = heapContentsPtr;
-    ass.prev = heapContentsPtr;
-    heapNode.prev = heapHeadPtr;
-    heapNode.next = heapAssPtr;
+    head.next = head.next2 = head.next3 = heapContentsPtr;
+    ass.prev = ass.prev2 = ass.prev3 = heapContentsPtr;
+    heapNode.prev = heapNode.prev2 = heapNode.prev3 = heapHeadPtr;
+    heapNode.next = heapNode.next2 = heapNode.next3 = heapAssPtr;
     // set data pointer to point to where the actual data starts
-    heapNode.data = (void *)((uint8_t *)heapContentsPtr + sizeof(heapNode));
+    heapNode.data = heapNode.data2 = heapNode.data3 = (void *)((uint8_t *)heapContentsPtr + sizeof(heapNode));
     // write nodes to the heap
     *heapHeadPtr = head;
     *heapAssPtr = ass;
     *heapContentsPtr = heapNode;
 
-    printf("\nSIZE OF NODE: %zu", sizeof(heapNode));
+    printf("\nSIZE OF NODE: %zu", sizeof(struct Node));
     printf("\nSIZE OF HEAP: %zu", head.next->size);
     return 0;
 }
