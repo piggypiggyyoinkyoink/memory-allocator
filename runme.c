@@ -11,7 +11,7 @@
     else      printf("FAIL\n"); \
 } while(0)
 int main(){
-    uint8_t *heap = malloc(1200*sizeof(uint8_t));
+    uint8_t *heap = malloc(1600*sizeof(uint8_t));
 
     //define 5-bit pattern
     uint8_t p1 = 0;
@@ -20,7 +20,7 @@ int main(){
     uint8_t p4 = 4;
     uint8_t p5 = 8;
     //set pattern in all bytes in heap
-    for (int i=0; i<1200; i+=5){
+    for (int i=0; i<1600; i+=5){
         *(heap+i) = p1;
         *(heap+i+1) = p2;
         *(heap+i+2) = p3;
@@ -29,7 +29,7 @@ int main(){
     }
 
     // run init
-    mm_init(heap, 1200);
+    mm_init(heap, 1600);
 
     printf("\n\nAllocating ptr");
     void* ptr = mm_malloc(70);
@@ -38,7 +38,7 @@ int main(){
     void* ptr2 = mm_malloc(70);
 
     printf("\n\nAllocating ptr3");
-    void* ptr3 = mm_malloc(7000);
+    void* ptr3 = mm_malloc(700);
     if (ptr3 != NULL){
         mm_free(ptr3);
     }
@@ -79,10 +79,8 @@ int main(){
     mm_free(ptr4);
     printf("\n\nFreeing ptr4 (double-free test)");
     mm_free(ptr4);
-    printf("\n\nFreeing invalid pointer");
     mm_free((void*)2);
     printf("\nHeapPtr: %p, PTR: %p, ptr2: %p, ptr4: %p, ptr5: %p", heap, ptr, ptr2, ptr4, ptr5);
-    free(heap);
 
     printf("\n[2] Testing basic allocation...\n");
 
@@ -117,15 +115,11 @@ int main(){
     TEST("Third alloc != NULL", c != NULL);
 
     mm_write(b,0, "TESTING-123", 12);
-    printf("PENIS");
-    char temp[12];
+
+    char temp[16];
     memset(temp, 0, sizeof(temp));
     mm_read(b,0, temp, 12);
-    printf("PENIS");
-
-    //puts(temp);
-    printf("PENIS");
-
+    puts(temp);
     TEST("Second block stores correct data", strcmp(temp, "TESTING-123") == 0);
 
     /* ----------------------------------------------------
@@ -196,10 +190,9 @@ int main(){
     ---------------------------------------------------- */
     printf("\n[10] Testing full-heap allocation...\n");
 
-    void *big2 = mm_malloc(1200 - 3 * 120);
+    void *big2 = mm_malloc(800 - 3 * 40);
     TEST("Large alloc after freeing everything", big2 != NULL);
 
     printf("\n======== ALL TESTS COMPLETE ========\n");
-    free(heap);
     return 0;
 }

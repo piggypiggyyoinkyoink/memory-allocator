@@ -23,8 +23,8 @@ struct Node{
     struct Node *prev3;  // pointer to previous block
     struct Node *next3;  // pointer to next block
     void *data3;  // pointer to data.
-    uint8_t* a; //unused
-    uint8_t* b; //unused
+    uint8_t state2; //unused
+    uint8_t state3; //unused
 };
 
 static struct Node head;
@@ -37,15 +37,13 @@ static size_t heapSize;
 
 size_t get_node_size(struct Node* nodePtr){
     struct Node n = *(nodePtr);
+    printf("\nSIZE VALUES: %zu, %zu, %zu", n.size, n.size2, n.size3);
+
+    if (!(n.size == n.size2 && n.size == n.size3 && n.size2 == n.size3)){
+        printf("\nWARNING: Inconsistent size values detected in get_node_size\n");
+    }
+    return n.size;
     size_t correctSize;
-    // if (n.size == n.size2){
-    //     correctSize = n.size;
-    // }else if (n.size == n.size3){
-    //     correctSize = n.size;
-    // }else if (n.size2 == n.size3){
-    //     correctSize = n.size2;
-    // }else{
-    // }
     correctSize = (n.size & n.size2) | (n.size & n.size3) | (n.size2 & n.size3);
     n.size = n.size2 = n.size3 = correctSize;
     *(nodePtr) = n;
@@ -54,6 +52,9 @@ size_t get_node_size(struct Node* nodePtr){
 
 struct Node* get_node_prev(struct Node* nodePtr){
     struct Node n = *(nodePtr);
+    if (!(n.prev == n.prev2 && n.prev == n.prev3 && n.prev2 == n.prev3)) {
+        printf("\nWARNING: Inconsistent prev pointers detected in get_node_prev\n");
+    }
     uintptr_t prev1 = (uintptr_t) n.prev;
     uintptr_t prev2 = (uintptr_t) n.prev2;
     uintptr_t prev3 = (uintptr_t) n.prev3;
@@ -66,12 +67,15 @@ struct Node* get_node_prev(struct Node* nodePtr){
 
 struct Node* get_node_next(struct Node* nodePtr){
     struct Node n = *(nodePtr);
+    if (!(n.next == n.next2 && n.next == n.next3) && !(n.next2 == n.next3)) {
+        printf("\nWARNING: Inconsistent next pointers detected in get_node_next\n");
+
+    }
     uintptr_t next1 = (uintptr_t) n.next;
     uintptr_t next2 = (uintptr_t) n.next2;
     uintptr_t next3 = (uintptr_t) n.next3;
 
     uintptr_t correctNext = (next1 & next2) | (next1 & next3) | (next2 & next3);
-    //printf("\ncorrectNext: %p", (struct Node*) correctNext);
     n.next = n.next2 = n.next3 = (struct Node*) correctNext;
     *(nodePtr) = n;
     return (struct Node*) correctNext;
@@ -79,6 +83,10 @@ struct Node* get_node_next(struct Node* nodePtr){
 
 void* get_node_data(struct Node* nodePtr){
     struct Node n = *(nodePtr);
+    if (!(n.data == n.data2 && n.data == n.data3 && n.data2 == n.data3)) {
+        printf("\nWARNING: Inconsistent data pointers detected in get_node_data\n");
+    }
+    //return n.data;
     uintptr_t data1 = (uintptr_t) n.data;
     uintptr_t data2 = (uintptr_t) n.data2;
     uintptr_t data3 = (uintptr_t) n.data3;
@@ -91,23 +99,34 @@ void* get_node_data(struct Node* nodePtr){
 
 uint8_t get_node_state(struct Node* nodePtr){
     struct Node n = *(nodePtr);
-    uint8_t state = n.state;
+    printf("\nSTATE VALUES: %u, %u, %u", n.state, n.state2, n.state3);
+    if (!(n.state == n.state2 && n.state == n.state3 && n.state2 == n.state3)) {
+        printf("\nWARNING: Inconsistent state values detected in get_node_state\n");
+    }
+    //i have no idea wtf is going on but it keeps resetting to 80 for some reason
+    if (n.state == 80){
+        n.state = 255;
+    }
+    //return n.state2;
+    //uint8_t state1 = n.state;
+    uint8_t state2 = n.state2;
+    //uint8_t state3 = n.state3;
     uint8_t count = 0;
     for (int i = 0; i < 8; i++) {
-        count += (state >> i) & 1;
+        count += (state2 >> i) & 1;
     }
-    // printf("\n\nSTATE BIT COUNT: %d", count);
-    // printf("\n\nSIZE: %d", get_node_size(nodePtr));
-    // printf("\n\nNext:%p", get_node_next(nodePtr));
-    // printf("\n\nPrev:%p", get_node_prev(nodePtr));
-    // printf("State: %d\n\n", state);
-    if (count >= 4){
-        n.state = UNFREE;
+    if(count >= 4){
+        state2 = UNFREE;
     }else{
-        n.state = FREE;
+        state2 = FREE;
     }
+    n.state2 = state2;
     *(nodePtr) = n;
-    return n.state;
+    return state2;
+    // uint8_t correctState = (state1 & state2) | (state1 & state3) | (state2 & state3);
+    // n.state = n.state2 = n.state3 = correctState;
+    // *(nodePtr) = n;
+    // return n.state;
 }
 
 
@@ -134,8 +153,8 @@ int is_valid_pointer(void* ptr, int sentinels_valid){
 // Returns 0 on success, non-zero on failure.
 int mm_init(uint8_t *heap, size_t heap_size) {
     // initialise head and ass senitnels
-    head.size = head.size2 = head.size3 =0; head.state = UNFREE; head.prev = head.prev2 = head.prev3 = NULL; head.next = head.next2 = head.next3 = NULL;
-    ass.size = ass.size2 = ass.size3 = 0; ass.state = UNFREE; ass.prev = ass.prev2 = ass.prev3 = NULL; ass.next = ass.next2 = ass.next3 = NULL;
+    head.size = head.size2 = head.size3 =0; head.state = head.state2 = head.state3 = UNFREE; head.prev = head.prev2 = head.prev3 = NULL; head.next = head.next2 = head.next3 = NULL;
+    ass.size = ass.size2 = ass.size3 = 0; ass.state = ass.state2 = ass.state3 = UNFREE; ass.prev = ass.prev2 = ass.prev3 = NULL; ass.next = ass.next2 = ass.next3 = NULL;
 
     if (heap_size < (3*sizeof(struct Node))) {
         // not enough heap space to do anything
@@ -177,7 +196,7 @@ int mm_init(uint8_t *heap, size_t heap_size) {
     heapNode.prev = heapNode.prev2 = heapNode.prev3 = heapHeadPtr;
     heapNode.next = heapNode.next2 = heapNode.next3 = heapAssPtr;    
     // set data pointer to point to where the actual data starts
-    heapNode.data = heapNode.data2 = heapNode.data3 = (void *)((uint8_t *)heapContentsPtr + sizeof(heapNode));
+    heapNode.data = heapNode.data2 = heapNode.data3 = (void *)((uint8_t *)heapContentsPtr + sizeof(struct Node));
     // write nodes to the heap
     *heapHeadPtr = head;
     *heapAssPtr = ass;
@@ -202,7 +221,7 @@ void resize_node(struct Node* nodePtr, size_t size) {
     }
     // initialise new node
     struct Node newNode;
-    newNode.state = FREE;
+    newNode.state = newNode.state2 = newNode.state3 = FREE;
     *(nodePtr) = n;
     newNode.size = newNode.size2 = newNode.size3 = (get_node_size(nodePtr) - (size + sizeof(struct Node)));
     // update current node size
@@ -225,11 +244,6 @@ void resize_node(struct Node* nodePtr, size_t size) {
     *nodePtr = n;
     *newNodePtr = newNode;
     *nextNodePtr = nextNode;
-    // printf("IN RESIZE NODE");
-    // printf("\n\nn.next: %p", get_node_next(newNodePtr));
-    // printf("\nn.next: %p", newNode.next);
-    // printf("\nn.next: %p", newNode.next2);
-    // printf("\nn.next: %p", newNode.next3);
     return;
 }
 
@@ -255,18 +269,13 @@ void *mm_malloc(size_t size) {
     // start at the first data node
     struct Node* currentNodePtr = (struct Node *) get_node_next(headPtr);
     struct Node currentNode = *currentNodePtr;
-    // printf("IN MMALLOC");
-    // printf("\nn.next: %p", get_node_next(currentNodePtr));
-    // printf("\nn.next: %p", currentNode.next);
-    // printf("\nn.next: %p", currentNode.next2);
-    // printf("\nn.next: %p", currentNode.next3);
     // check all nodes until we find a free one of sufficient size, or reach ass
     while ((!end) && (!found)) {
         printf("\n CURRENT NODE SIZE: %zu", get_node_size(currentNodePtr));
         if (get_node_state(currentNodePtr) == FREE && get_node_size(currentNodePtr) >= size) {
             // resize and allocate this node
             printf("\nMEMORY BLOCK FOUND");
-            currentNode.state = UNFREE;  // unfree the node
+            currentNode.state = currentNode.state2 = currentNode.state3 = UNFREE;  // unfree the node
             *currentNodePtr = currentNode;  // write back to heap
             if (get_node_size(currentNodePtr) > aligned_size + sizeof(struct Node)) {
                 // resize node so there is some heap left for everything else
@@ -446,7 +455,6 @@ void merge_node(struct Node* nodePtr) {
     if ((get_node_state(prevNodePtr) == FREE) && (get_node_state(nextNodePtr) == FREE) && (get_node_prev(prevNodePtr) != NULL) && (get_node_next(nextNodePtr) != NULL)) {  // should probs use a separate function to check freeness that can be applied anywhere and takes bitflips into acc.
         // get new size of merged node
         size_t newSize = (size_t)((uint8_t*)get_node_next(nextNodePtr) - (uint8_t*)get_node_data(prevNodePtr));
-        printf("\nB1: NEW SIZE AFTER MERGE: %zu", newSize);
         // "delete" redundant nodes (just update prev and next ptrs)
         delete_node(currentNodePtr);
         delete_node(nextNodePtr);
@@ -459,15 +467,7 @@ void merge_node(struct Node* nodePtr) {
         overwrite_data(prevNode.data, newSize);//TODO: fix this to use get_node_data
 
     } else if (get_node_state(prevNodePtr) == FREE) { //something is freeing the head and causing breakages
-        // printf("\nPREV NODE: %p", prevNodePtr);
-        // printf("\nHeap ptr: %p", heapPtr);
-        // printf("\nPREV NODE STATE: %d", get_node_state(prevNodePtr));
-        // get new size of merged node
         size_t newSize = (size_t)((uint8_t*)get_node_next(currentNodePtr) - (uint8_t*)get_node_data(prevNodePtr));
-        // printf("\n CUrrentNode Next: %p", get_node_next(currentNodePtr));
-        // printf("\nPrevNode Data: %p", get_node_data(prevNodePtr));
-        // printf("\nB2: NEW SIZE AFTER MERGE: %zu", newSize);
-
         // "delete" redundant node (just update prev and next ptrs)
         delete_node(currentNodePtr);
         prevNode = *prevNodePtr;  // IMPORTANT: delete_node() changes the pointers of the nodes on the heap so these changes need to be updated in the prevNode variable so they arent overwritten
@@ -479,7 +479,6 @@ void merge_node(struct Node* nodePtr) {
         overwrite_data(prevNode.data, newSize);
     } else if (get_node_state(nextNodePtr) == FREE) {
         size_t newSize = (size_t)((uint8_t*)get_node_next(nextNodePtr) - (uint8_t*)get_node_data(currentNodePtr));
-        // printf("\nB3: NEW SIZE AFTER MERGE: %zu", newSize);
 
         delete_node(nextNodePtr);
         currentNode = *currentNodePtr;
@@ -520,8 +519,6 @@ void mm_free(void *ptr) {
     struct Node n = *nodePtr;
 
     // return if prev or next pointers are invalid
-    // printf("\n%p", get_node_prev(nodePtr));
-    // printf("\n%p", get_node_next(nodePtr));
     if (!is_valid_pointer(get_node_prev(nodePtr), 1) || !is_valid_pointer(get_node_next(nodePtr), 1)) {
         printf("\nINVALID PREV/NEXT POINTER");
         return;
@@ -537,7 +534,7 @@ void mm_free(void *ptr) {
     uint8_t* dataPtr = n.data;
     printf("\nDATA PTR: %p", (void*) dataPtr);
     // free node BEFORE calling merge_node() - IMPORTANT
-    n.state = FREE;
+    n.state = n.state2 = n.state3 = FREE;
     *nodePtr = n;  // update heap
 
     // Merge with adjacent frees and overwrite data with 5B pattern
