@@ -15,6 +15,11 @@ struct Node{
     struct Node *prev;  // pointer to previous block
     struct Node *next;  // pointer to next block
     void *data;  // pointer to data.
+    struct Node* clone1;
+    struct Node* clone2;
+    uint8_t checksum;
+    void *data2;
+    void *data3;
 };
 
 static struct Node head;
@@ -25,21 +30,20 @@ static size_t heapSize;
 
 int is_valid_pointer(void* ptr, int sentinels_valid){
     if (sentinels_valid){
-        if (((uint8_t*)ptr) < (heapPtr) || ((uint8_t*)ptr) >= (heapPtr + heapSize-sizeof(struct Node))) {
-            //printf("\nINVALID POINTER");
+        if (((uint8_t*)ptr) < (heapPtr) || ((uint8_t*)ptr) > (heapPtr + heapSize-sizeof(struct Node))) {
+            printf("\nINVALID POINTER nsi");
             return 0;
         }else{
             return 1;
         }
     }else{
-        if (((uint8_t*)ptr) < (heapPtr+sizeof(struct Node)) || ((uint8_t*)ptr) >= (heapPtr + heapSize - 2*sizeof(struct Node))) {
-            //printf("\nINVALID POINTER");
+        if (((uint8_t*)ptr) < (heapPtr+sizeof(struct Node)-1) || ((uint8_t*)ptr) >= (heapPtr + heapSize - 2*sizeof(struct Node))) {
+            printf("\nINVALID POINTER si");
             return 0;
         }else{
             return 1;
         }
     }
-
 }
 
 // Initialize the allocator over a provided memory block.
@@ -401,8 +405,10 @@ void mm_free(void *ptr) {
     struct Node n = *nodePtr;
 
     // return if prev or next pointers are invalid
+    printf("\n%p", n.prev);
+    printf("\n%p", n.next);
     if (!is_valid_pointer(n.prev, 1) || !is_valid_pointer(n.next, 1)) {
-        printf("\nINVALID POINTER");
+        printf("\nINVALID PREV/NEXT POINTER");
         return;
     }
 
