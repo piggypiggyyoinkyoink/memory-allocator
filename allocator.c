@@ -221,15 +221,11 @@ int mm_init(uint8_t *heap, size_t heap_size) {
         (uint8_t *)heapContentsPtr + sizeof(heapNode));
 
     // write nodes to the heap
-    while (!check_node(heapHeadPtr, head)) {
-        *heapHeadPtr = head;
-    }
-    while (!check_node(heapAssPtr, ass)) {
-        *heapAssPtr = ass;
-    }
-    while (!check_node(heapContentsPtr, heapNode)) {
-        *heapContentsPtr = heapNode;
-    }
+    *heapHeadPtr = head;
+    
+    *heapAssPtr = ass;
+    *heapContentsPtr = heapNode;
+
     //  write head and ass pointers to global vars
     headPtr = heapHeadPtr;
     assPtr = heapAssPtr;
@@ -277,15 +273,10 @@ void resize_node(struct Node* nodePtr, size_t size) {
     n.next = n.next2 = n.next3 = newNodePtr;
     nextNode.prev = nextNode.prev2 = nextNode.prev3 = newNodePtr;
     // write to heap
-    while (!check_node(nodePtr, n)) {
-        *nodePtr = n;
-    }
-    while (!check_node(newNodePtr, newNode)) {
-        *newNodePtr = newNode;
-    }
-    while (!check_node(nextNodePtr, nextNode)) {
-        *nextNodePtr = nextNode;
-    }
+    
+    *nodePtr = n;
+    *newNodePtr = newNode;
+    *nextNodePtr = nextNode;
     return;
 }
 
@@ -417,6 +408,7 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len) {
         while (*(buff+i) != *(dataPtr+i)) {
             *(buff+i) = *(dataPtr+i);
         }
+        // printf("\n%d", *(buff+i));
         numBytes++;
     }
     return numBytes;
