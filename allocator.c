@@ -38,7 +38,6 @@ static size_t nodeSize = 120;
 
 size_t get_node_size(struct Node* nodePtr){
     struct Node n = *(nodePtr);
-    printf("\nSIZE VALUES: %zu, %zu, %zu", n.size, n.size2, n.size3);
 
     if (!(n.size == n.size2 && n.size == n.size3 && n.size2 == n.size3)){
         printf("\nWARNING: Inconsistent size values detected in get_node_size\n");
@@ -100,7 +99,6 @@ void* get_node_data(struct Node* nodePtr){
 
 uint8_t get_node_state(struct Node* nodePtr){
     struct Node n = *(nodePtr);
-    printf("\nSTATE VALUES: %u, %u, %u", n.state, n.state2, n.state3);
     if (!(n.state == n.state2 && n.state == n.state3 && n.state2 == n.state3)) {
         printf("\nWARNING: Inconsistent state values detected in get_node_state\n");
     }
@@ -200,6 +198,8 @@ int mm_init(uint8_t *heap, size_t heap_size) {
     assPtr = heapAssPtr;
     printf("\nSIZE OF NODE: %zu", nodeSize);
     printf("\nSIZE OF HEAP: %zu", head.next->size);
+    int dingus = (uint8_t)((uint8_t*)heapNode.data-(uint8_t*)heapContentsPtr);
+    printf("\nDINGUS: %d", dingus);
     return 0;
 }
 
@@ -224,7 +224,6 @@ void resize_node(struct Node* nodePtr, size_t size) {
     struct Node* newNodePtr = (struct Node*)((uint8_t*)nodePtr + size + nodeSize);
     // initialise data pointer for new node
     newNode.data = newNode.data2 = newNode.data3 = (void *)((uint8_t *)newNodePtr + nodeSize);
-    printf("\nNEW NODE DATA PTR: %p", newNode.data);
     // get next node
     struct Node* nextNodePtr = (struct Node *) get_node_next(nodePtr);
     
@@ -247,7 +246,6 @@ void resize_node(struct Node* nodePtr, size_t size) {
 // Allocate a block with ALIGN-byte aligned payload. Returns
 // NULL on failure.
 void *mm_malloc(size_t size) {
-    printf("\nMMMALLOC CURRENT HEAD STATE: %d", get_node_state(headPtr));
     printf("\nALLOCATING BLOCK OF SIZE %zu", size);
     if (size < 1) {
         return NULL;
@@ -492,7 +490,6 @@ void merge_node(struct Node* nodePtr) {
 // Free a previously-allocated pointer (ignore NULL).
 // Must detect double-free.
 void mm_free(void *ptr) {
-    printf("\nMMFREE CURRENT HEAD STATE: %d", get_node_state(headPtr));
 
     ptr = (void*)((uint8_t*)ptr - nodeSize);  // data ptr to node ptr
 
@@ -526,7 +523,6 @@ void mm_free(void *ptr) {
     // get size and data pointer of node
     size_t size = n.size;
     uint8_t* dataPtr = n.data;
-    printf("\nDATA PTR: %p", (void*) dataPtr);
     // free node BEFORE calling merge_node() - IMPORTANT
     n.state = n.state2 = n.state3 = FREE;
     *nodePtr = n;  // update heap
