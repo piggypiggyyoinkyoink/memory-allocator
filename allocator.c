@@ -23,8 +23,8 @@ struct Node{
     struct Node *prev3;  // pointer to previous block
     struct Node *next3;  // pointer to next block
     void *data3;  // pointer to data.
-    uint8_t* a; //unused
-    uint8_t* b; //unused
+    uint16_t checksum; //unused
+    uint16_t* garbage; //unused
 };
 
 static struct Node head;
@@ -34,6 +34,7 @@ static struct Node* assPtr;
 static uint8_t *heapPtr;
 static uint8_t pattern[5];
 static size_t heapSize;
+static size_t nodeSize = 120;
 
 size_t get_node_size(struct Node* nodePtr){
     struct Node n = *(nodePtr);
@@ -162,9 +163,10 @@ int mm_init(uint8_t *heap, size_t heap_size) {
     head.next = head.next2 = head.next3 = heapContentsPtr;
     ass.prev = ass.prev2 = ass.prev3 = heapContentsPtr;
     heapNode.prev = heapNode.prev2 = heapNode.prev3 = heapHeadPtr;
-    heapNode.next = heapNode.next2 = heapNode.next3 = heapAssPtr;    
+    heapNode.next = heapNode.next2 = heapNode.next3 = heapAssPtr;
     // set data pointer to point to where the actual data starts
     heapNode.data = heapNode.data2 = heapNode.data3 = (void *)((uint8_t *)heapContentsPtr + sizeof(heapNode));
+    //heapNode.checksum = 0;
     // write nodes to the heap
     *heapHeadPtr = head;
     *heapAssPtr = ass;
@@ -173,6 +175,7 @@ int mm_init(uint8_t *heap, size_t heap_size) {
     headPtr = heapHeadPtr;
     assPtr = heapAssPtr;
     printf("\nSIZE OF NODE: %zu", sizeof(struct Node));
+    printf("\nSIZE OF HEAPNODE: %zu", sizeof(heapNode));
     printf("\nSIZE OF HEAP: %zu", head.next->size);
     return 0;
 }
