@@ -34,6 +34,7 @@ static struct Node* assPtr;
 static uint8_t *heapPtr;
 static uint8_t pattern[5];
 static size_t heapSize;
+static size_t nodeSize = 120;
 
 size_t get_node_size(struct Node* nodePtr){
     struct Node n = *(nodePtr);
@@ -103,44 +104,37 @@ uint8_t get_node_state(struct Node* nodePtr){
     if (!(n.state == n.state2 && n.state == n.state3 && n.state2 == n.state3)) {
         printf("\nWARNING: Inconsistent state values detected in get_node_state\n");
     }
-    //i have no idea wtf is going on but it keeps resetting to 80 for some reason
-    if (n.state == 80){
-        n.state = 255;
-    }
+    
     //return n.state2;
     //uint8_t state1 = n.state;
-    uint8_t state2 = n.state2;
+    uint8_t state = n.state2;
     //uint8_t state3 = n.state3;
     uint8_t count = 0;
     for (int i = 0; i < 8; i++) {
-        count += (state2 >> i) & 1;
+        count += (state >> i) & 1;
     }
     if(count >= 4){
-        state2 = UNFREE;
+        state = UNFREE;
     }else{
-        state2 = FREE;
+        state = FREE;
     }
-    n.state2 = state2;
+    n.state = state;
     *(nodePtr) = n;
-    return state2;
-    // uint8_t correctState = (state1 & state2) | (state1 & state3) | (state2 & state3);
-    // n.state = n.state2 = n.state3 = correctState;
-    // *(nodePtr) = n;
-    // return n.state;
+    return state;
 }
 
 
 
 int is_valid_pointer(void* ptr, int sentinels_valid){
     if (sentinels_valid){
-        if (((uint8_t*)ptr) < (heapPtr) || ((uint8_t*)ptr) > (heapPtr + heapSize-sizeof(struct Node))) {
+        if (((uint8_t*)ptr) < (heapPtr) || ((uint8_t*)ptr) > (heapPtr + heapSize-nodeSize)) {
             printf("\nINVALID POINTER nsi");
             return 0;
         }else{
             return 1;
         }
     }else{
-        if ((((uint8_t*)ptr) < (heapPtr+sizeof(struct Node))) || (((uint8_t*)ptr) >= (heapPtr + heapSize - 2*sizeof(struct Node)))) {
+        if ((((uint8_t*)ptr) < (heapPtr+nodeSize)) || (((uint8_t*)ptr) >= (heapPtr + heapSize - 2*nodeSize))) {
             printf("\nINVALID POINTER si");
             return 0;
         }else{
@@ -156,7 +150,7 @@ int mm_init(uint8_t *heap, size_t heap_size) {
     head.size = head.size2 = head.size3 =0; head.state = head.state2 = head.state3 = UNFREE; head.prev = head.prev2 = head.prev3 = NULL; head.next = head.next2 = head.next3 = NULL;
     ass.size = ass.size2 = ass.size3 = 0; ass.state = ass.state2 = ass.state3 = UNFREE; ass.prev = ass.prev2 = ass.prev3 = NULL; ass.next = ass.next2 = ass.next3 = NULL;
 
-    if (heap_size < (3*sizeof(struct Node))) {
+    if (heap_size < (3*nodeSize)) {
         // not enough heap space to do anything
         printf("Uh oh");
         return -1;
@@ -175,9 +169,9 @@ int mm_init(uint8_t *heap, size_t heap_size) {
     heapSize = heap_size;
 
     // initialise initial data node
-    struct Node heapNode = {(heap_size - 3*sizeof(struct Node)), FREE, NULL, NULL, (int*)heap };
+    struct Node heapNode = {(heap_size - 3*nodeSize), FREE, NULL, NULL, (int*)heap };
     heapPtr = heap;
-    heapNode.size = heapNode.size2 = heapNode.size3 = (heap_size - 3*sizeof(struct Node));
+    heapNode.size = heapNode.size2 = heapNode.size3 = (heap_size - 3*nodeSize);
     // Initialise pointers to nodes on the heap
 
     // put the head at the start of the heap
@@ -185,10 +179,10 @@ int mm_init(uint8_t *heap, size_t heap_size) {
 
     // put the ass  at the end of the heap
     // struct Node *heapAssPtr = (struct Node *) (((uint8_t *)heap + (heap_size-1)) - sizeof(ass) );
-    struct Node *heapAssPtr = (struct Node *)((uint8_t *)heap + heap_size - sizeof(struct Node));
+    struct Node *heapAssPtr = (struct Node *)((uint8_t *)heap + heap_size - nodeSize);
 
     // put heapNode in the middle
-    struct Node *heapContentsPtr = (struct Node *) ((uint8_t *)heap + sizeof(struct Node));
+    struct Node *heapContentsPtr = (struct Node *) ((uint8_t *)heap + nodeSize);
 
     // set the prev and next pointers for each node
     head.next = head.next2 = head.next3 = heapContentsPtr;
@@ -196,7 +190,7 @@ int mm_init(uint8_t *heap, size_t heap_size) {
     heapNode.prev = heapNode.prev2 = heapNode.prev3 = heapHeadPtr;
     heapNode.next = heapNode.next2 = heapNode.next3 = heapAssPtr;    
     // set data pointer to point to where the actual data starts
-    heapNode.data = heapNode.data2 = heapNode.data3 = (void *)((uint8_t *)heapContentsPtr + sizeof(struct Node));
+    heapNode.data = heapNode.data2 = heapNode.data3 = (void *)((uint8_t *)heapContentsPtr + nodeSize);
     // write nodes to the heap
     *heapHeadPtr = head;
     *heapAssPtr = ass;
@@ -204,7 +198,7 @@ int mm_init(uint8_t *heap, size_t heap_size) {
     //write head and ass pointers to global vars
     headPtr = heapHeadPtr;
     assPtr = heapAssPtr;
-    printf("\nSIZE OF NODE: %zu", sizeof(struct Node));
+    printf("\nSIZE OF NODE: %zu", nodeSize);
     printf("\nSIZE OF HEAP: %zu", head.next->size);
     return 0;
 }
@@ -223,13 +217,13 @@ void resize_node(struct Node* nodePtr, size_t size) {
     struct Node newNode;
     newNode.state = newNode.state2 = newNode.state3 = FREE;
     *(nodePtr) = n;
-    newNode.size = newNode.size2 = newNode.size3 = (get_node_size(nodePtr) - (size + sizeof(struct Node)));
+    newNode.size = newNode.size2 = newNode.size3 = (get_node_size(nodePtr) - (size + nodeSize));
     // update current node size
     n.size = n.size2 = n.size3 = size;
     // get the correct pointer for the new node
-    struct Node* newNodePtr = (struct Node*)((uint8_t*)nodePtr + size + sizeof(struct Node));
+    struct Node* newNodePtr = (struct Node*)((uint8_t*)nodePtr + size + nodeSize);
     // initialise data pointer for new node
-    newNode.data = newNode.data2 = newNode.data3 = (void *)((uint8_t *)newNodePtr + sizeof(struct Node));
+    newNode.data = newNode.data2 = newNode.data3 = (void *)((uint8_t *)newNodePtr + nodeSize);
     printf("\nNEW NODE DATA PTR: %p", newNode.data);
     // get next node
     struct Node* nextNodePtr = (struct Node *) get_node_next(nodePtr);
@@ -277,7 +271,7 @@ void *mm_malloc(size_t size) {
             printf("\nMEMORY BLOCK FOUND");
             currentNode.state = currentNode.state2 = currentNode.state3 = UNFREE;  // unfree the node
             *currentNodePtr = currentNode;  // write back to heap
-            if (get_node_size(currentNodePtr) > aligned_size + sizeof(struct Node)) {
+            if (get_node_size(currentNodePtr) > aligned_size + nodeSize) {
                 // resize node so there is some heap left for everything else
                 // use aligned size to ensure the new node generated by resize_node is also aligned
                 printf("\nNODE RESIZED");
@@ -316,7 +310,7 @@ void *mm_malloc(size_t size) {
 // Returns the number of bytes read, or -1 if corruption or invalid pointer detected.
 int mm_read(void *ptr, size_t offset, void *buf, size_t len) {
     printf("\nREADING DATA OF LEN %zu AT OFFSET %zu", len, offset);
-    ptr = (void*)((uint8_t*)ptr - sizeof(struct Node));  // data ptr to node ptr
+    ptr = (void*)((uint8_t*)ptr - nodeSize);  // data ptr to node ptr
     // return if pointer invalid
     if (((uint8_t*)ptr) < heapPtr || ((uint8_t*)ptr) > (heapPtr + heapSize)) {
         printf("\nINVALID POINTER IN MM_READ");
@@ -361,7 +355,7 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len) {
 // Safely write data into an allocated block starting at offset bytes from src.
 // Returns the number of bytes written, or -1 if corruption or invalid pointer detected.
 int mm_write(void *ptr, size_t offset, const void *src, size_t len) {
-    ptr = (void*)((uint8_t*)ptr - sizeof(struct Node));  // data ptr to node ptr
+    ptr = (void*)((uint8_t*)ptr - nodeSize);  // data ptr to node ptr
     printf("\nWRITING DATA OF LEN %zu AT OFFSET %zu", len, offset);
     // return if pointer invalid
     if (((uint8_t*)ptr) < heapPtr || ((uint8_t*)ptr) > (heapPtr + heapSize)) {
@@ -500,7 +494,7 @@ void merge_node(struct Node* nodePtr) {
 void mm_free(void *ptr) {
     printf("\nMMFREE CURRENT HEAD STATE: %d", get_node_state(headPtr));
 
-    ptr = (void*)((uint8_t*)ptr - sizeof(struct Node));  // data ptr to node ptr
+    ptr = (void*)((uint8_t*)ptr - nodeSize);  // data ptr to node ptr
 
     // check for null pointer
     if (ptr == NULL) {
