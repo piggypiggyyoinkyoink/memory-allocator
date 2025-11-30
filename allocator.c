@@ -135,6 +135,29 @@ int get_checksum(uint8_t* dataPtr, size_t size) {
 
 
 
+int check_node(struct Node* nodePtr, struct Node node){
+    struct Node n = *nodePtr;
+    if (
+        (n.size != node.size)
+        || (n.size2 != node.size2)
+        || (n.size3 != node.size3)
+        || (n.prev != node.prev)
+        || (n.prev2 != node.prev2)
+        || (n.prev3 != node.prev3)
+        || (n.next != node.next)
+        || (n.next2 != node.next2)
+        || (n.next3 != node.next3)
+        || (n.data != node.data)
+        || (n.data2 != node.data2)
+        || (n.data3 != node.data3)
+    ) {
+        return 1;
+    } else {
+        return 1;
+    }
+}
+
+
 // Initialize the allocator over a provided memory block.
 // Returns 0 on success, non-zero on failure.
 int mm_init(uint8_t *heap, size_t heap_size) {
@@ -198,9 +221,15 @@ int mm_init(uint8_t *heap, size_t heap_size) {
         (uint8_t *)heapContentsPtr + sizeof(heapNode));
 
     // write nodes to the heap
-    *heapHeadPtr = head;
-    *heapAssPtr = ass;
-    *heapContentsPtr = heapNode;
+    while (!check_node(heapHeadPtr, head)) {
+        *heapHeadPtr = head;
+    }
+    while (!check_node(heapAssPtr, ass)) {
+        *heapAssPtr = ass;
+    }
+    while (!check_node(heapContentsPtr, heapNode)) {
+        *heapContentsPtr = heapNode;
+    }
     //  write head and ass pointers to global vars
     headPtr = heapHeadPtr;
     assPtr = heapAssPtr;
@@ -248,9 +277,15 @@ void resize_node(struct Node* nodePtr, size_t size) {
     n.next = n.next2 = n.next3 = newNodePtr;
     nextNode.prev = nextNode.prev2 = nextNode.prev3 = newNodePtr;
     // write to heap
-    *nodePtr = n;
-    *newNodePtr = newNode;
-    *nextNodePtr = nextNode;
+    while (!check_node(nodePtr, n)) {
+        *nodePtr = n;
+    }
+    while (!check_node(newNodePtr, newNode)) {
+        *newNodePtr = newNode;
+    }
+    while (!check_node(nextNodePtr, nextNode)) {
+        *nextNodePtr = nextNode;
+    }
     return;
 }
 
@@ -285,7 +320,10 @@ void *mm_malloc(size_t size) {
             // resize and allocate this node
             printf("\nMEMORY BLOCK FOUND");
             currentNode.state = UNFREE;  // unfree the node
-            *currentNodePtr = currentNode;  // write back to heap
+            
+            while (!check_node(currentNodePtr, currentNode)) {
+                *currentNodePtr = currentNode;  // write back to heap
+            }
             if (
                 get_node_size(currentNodePtr)
                 > aligned_size + sizeof(struct Node)
@@ -302,7 +340,9 @@ void *mm_malloc(size_t size) {
             memset(get_node_data(currentNodePtr), 0, currentNode.size);
             found = 1;
             currentNode.checksum = 0;
-            *currentNodePtr = currentNode;
+            while (!check_node(currentNodePtr, currentNode)) {
+                *currentNodePtr = currentNode;
+            }
             printf("\nALLOCATION SUCCESSFUL");
             // get data ptr to return
             void* dataPtr = get_node_data(currentNodePtr);
@@ -374,8 +414,9 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len) {
     dataPtr += offset;
 
     for (size_t i = 0; i < len; i++) {
-        *(buff+i) = *(dataPtr+i);
-        // printf("\n%d", *(buff+i));
+        while (*(buff+i) != *(dataPtr+i)) {
+            *(buff+i) = *(dataPtr+i);
+        }
         numBytes++;
     }
     return numBytes;
@@ -453,8 +494,12 @@ void delete_node(struct Node* nodePtr) {
     nextNode.prev = nextNode.prev2 = nextNode.prev3 = prevNodePtr;
     prevNode.next = prevNode.next2 = prevNode.next3 = nextNodePtr;
     // write to heap
-    *prevNodePtr = prevNode;
-    *nextNodePtr = nextNode;
+    while (!check_node(prevNodePtr, prevNode)) {
+        *prevNodePtr = prevNode;
+    }
+    while (!check_node(nextNodePtr, nextNode)) {
+        *nextNodePtr = nextNode;
+    }
     return;
 }
 
@@ -505,9 +550,10 @@ void merge_node(struct Node* nodePtr) {
         // update size
         prevNode.size = prevNode.size2 = prevNode.size3 = newSize;
         // update heap
-        *prevNodePtr = prevNode;
+        while (!check_node(prevNodePtr, prevNode)) {
+            *prevNodePtr = prevNode;
+        }
         // fill with 5B pattern
-        // to do: fix this to use get_node_data
         overwrite_data(get_node_data(prevNodePtr), newSize);
 
     } else if (get_node_state(prevNodePtr) == FREE) {
@@ -523,7 +569,9 @@ void merge_node(struct Node* nodePtr) {
         // update size
         prevNode.size = prevNode.size2 = prevNode.size3 = newSize;
         // updates heap
-        *prevNodePtr = prevNode;
+        while (!check_node(prevNodePtr, prevNode)) {
+            *prevNodePtr = prevNode;
+        }
         // fill with 5B pattern
         overwrite_data(get_node_data(prevNodePtr), newSize);
     } else if (get_node_state(nextNodePtr) == FREE) {
@@ -534,7 +582,9 @@ void merge_node(struct Node* nodePtr) {
         delete_node(nextNodePtr);
         currentNode = *currentNodePtr;
         currentNode.size = currentNode.size2 = currentNode.size3 = newSize;
-        *currentNodePtr = currentNode;
+        while (!check_node(currentNodePtr, currentNode)) {
+            *currentNodePtr = currentNode;
+        }
         overwrite_data(get_node_data(currentNodePtr), newSize);
     } else {
         // if no merging to be done, just overwrite with 5B pattern
