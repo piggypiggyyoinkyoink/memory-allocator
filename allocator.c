@@ -133,6 +133,8 @@ int get_checksum(uint8_t* dataPtr, size_t size) {
     return checksum;
 }
 
+
+
 // Initialize the allocator over a provided memory block.
 // Returns 0 on success, non-zero on failure.
 int mm_init(uint8_t *heap, size_t heap_size) {
@@ -408,13 +410,18 @@ int mm_write(void *ptr, size_t offset, const void *src, size_t len) {
         printf("\nBLOCK TOO SMALL");
         return -1;
     }
+
+
     // write data 1 byte at a time
     int numBytes = 0;
 
     // apply offset
     dataPtr += offset;
     for (size_t i = 0; i < (len); i++) {
-        *(dataPtr+i) = *(source+i);
+        // ensure each byte is written correctly
+        while ( *(dataPtr+i) != *(source+i) ) {
+            *(dataPtr+i) = *(source+i);
+        }
         numBytes++;
     }
 
@@ -462,10 +469,13 @@ void overwrite_data(uint8_t* dataPtr, size_t size) {
     }
     int x = ((intptr_t)dataPtr - (intptr_t)heapPtr) % 5;
     for (size_t i = 0; i < size; ++i) {
-        dataPtr[i] = pattern[(i + x) % 5];
+        uint8_t byte = pattern[(i + x) % 5];
+        while ( dataPtr[i] != byte ){
+            dataPtr[i] = byte;
+        }
     }
-        return;
-    }
+    return;
+}
 
 
 
@@ -498,7 +508,7 @@ void merge_node(struct Node* nodePtr) {
         *prevNodePtr = prevNode;
         // fill with 5B pattern
         // to do: fix this to use get_node_data
-        overwrite_data(prevNode.data, newSize);
+        overwrite_data(get_node_data(prevNodePtr), newSize);
 
     } else if (get_node_state(prevNodePtr) == FREE) {
         // get new size of merged node
@@ -515,7 +525,7 @@ void merge_node(struct Node* nodePtr) {
         // updates heap
         *prevNodePtr = prevNode;
         // fill with 5B pattern
-        overwrite_data(prevNode.data, newSize);
+        overwrite_data(get_node_data(prevNodePtr), newSize);
     } else if (get_node_state(nextNodePtr) == FREE) {
         size_t newSize = (size_t)(
             (uint8_t*)get_node_next(nextNodePtr)
@@ -525,10 +535,12 @@ void merge_node(struct Node* nodePtr) {
         currentNode = *currentNodePtr;
         currentNode.size = currentNode.size2 = currentNode.size3 = newSize;
         *currentNodePtr = currentNode;
-        overwrite_data(currentNode.data, newSize);
+        overwrite_data(get_node_data(currentNodePtr), newSize);
     } else {
         // if no merging to be done, just overwrite with 5B pattern
-        overwrite_data(currentNode.data, currentNode.size);
+        overwrite_data(
+            get_node_data(currentNodePtr), get_node_size(currentNodePtr));
+
     }
     return;
 }
