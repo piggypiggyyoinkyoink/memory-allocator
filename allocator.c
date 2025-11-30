@@ -38,14 +38,6 @@ static size_t heapSize;
 size_t get_node_size(struct Node* nodePtr){
     struct Node n = *(nodePtr);
     size_t correctSize;
-    // if (n.size == n.size2){
-    //     correctSize = n.size;
-    // }else if (n.size == n.size3){
-    //     correctSize = n.size;
-    // }else if (n.size2 == n.size3){
-    //     correctSize = n.size2;
-    // }else{
-    // }
     correctSize = (n.size & n.size2) | (n.size & n.size3) | (n.size2 & n.size3);
     n.size = n.size2 = n.size3 = correctSize;
     *(nodePtr) = n;
@@ -82,9 +74,7 @@ void* get_node_data(struct Node* nodePtr){
     uintptr_t data1 = (uintptr_t) n.data;
     uintptr_t data2 = (uintptr_t) n.data2;
     uintptr_t data3 = (uintptr_t) n.data3;
-    printf("\ndata1: %p", (void*) data1);
     uintptr_t correctData = (data1 & data2) | (data1 & data3) | (data2 & data3);
-    printf("\ncorrectData: %p", (void*) correctData);
 
     n.data = n.data2 = n.data3 = (void*) correctData;
     *(nodePtr) = n;
@@ -222,11 +212,6 @@ void resize_node(struct Node* nodePtr, size_t size) {
     *nodePtr = n;
     *newNodePtr = newNode;
     *nextNodePtr = nextNode;
-    // printf("IN RESIZE NODE");
-    // printf("\n\nn.next: %p", get_node_next(newNodePtr));
-    // printf("\nn.next: %p", newNode.next);
-    // printf("\nn.next: %p", newNode.next2);
-    // printf("\nn.next: %p", newNode.next3);
     return;
 }
 
@@ -251,11 +236,6 @@ void *mm_malloc(size_t size) {
     // start at the first data node
     struct Node* currentNodePtr = (struct Node *) get_node_next(headPtr);
     struct Node currentNode = *currentNodePtr;
-    // printf("IN MMALLOC");
-    // printf("\nn.next: %p", get_node_next(currentNodePtr));
-    // printf("\nn.next: %p", currentNode.next);
-    // printf("\nn.next: %p", currentNode.next2);
-    // printf("\nn.next: %p", currentNode.next3);
     // check all nodes until we find a free one of sufficient size, or reach ass
     while ((!end) && (!found)) {
         printf("\n CURRENT NODE SIZE: %zu", get_node_size(currentNodePtr));
@@ -452,14 +432,8 @@ void merge_node(struct Node* nodePtr) {
         overwrite_data(prevNode.data, newSize);//TODO: fix this to use get_node_data
 
     } else if (get_node_state(prevNodePtr) == FREE) { //something is freeing the head and causing breakages
-        printf("\nPREV NODE: %p", prevNodePtr);
-        printf("\nHeap ptr: %p", heapPtr);
-        printf("\nPREV NODE STATE: %d", get_node_state(prevNodePtr));
         // get new size of merged node
         size_t newSize = (size_t)((uint8_t*)get_node_next(currentNodePtr) - (uint8_t*)get_node_data(prevNodePtr));
-        printf("\n CUrrentNode Next: %p", get_node_next(currentNodePtr));
-        printf("\nPrevNode Data: %p", get_node_data(prevNodePtr));
-        printf("\nB2: NEW SIZE AFTER MERGE: %zu", newSize);
 
         // "delete" redundant node (just update prev and next ptrs)
         delete_node(currentNodePtr);
@@ -472,7 +446,6 @@ void merge_node(struct Node* nodePtr) {
         overwrite_data(prevNode.data, newSize);
     } else if (get_node_state(nextNodePtr) == FREE) {
         size_t newSize = (size_t)((uint8_t*)get_node_next(nextNodePtr) - (uint8_t*)get_node_data(currentNodePtr));
-        printf("\nB3: NEW SIZE AFTER MERGE: %zu", newSize);
 
         delete_node(nextNodePtr);
         currentNode = *currentNodePtr;
@@ -526,7 +499,6 @@ void mm_free(void *ptr) {
     // get size and data pointer of node
     size_t size = n.size;
     uint8_t* dataPtr = n.data;
-    printf("\nDATA PTR: %p", (void*) dataPtr);
     // free node BEFORE calling merge_node() - IMPORTANT
     n.state = FREE;
     *nodePtr = n;  // update heap

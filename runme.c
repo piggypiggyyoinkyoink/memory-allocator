@@ -82,7 +82,6 @@ int main(){
     printf("\n\nFreeing invalid pointer");
     mm_free((void*)2);
     printf("\nHeapPtr: %p, PTR: %p, ptr2: %p, ptr4: %p, ptr5: %p", heap, ptr, ptr2, ptr4, ptr5);
-    free(heap);
 
     printf("\n[2] Testing basic allocation...\n");
 
@@ -196,5 +195,7 @@ int main(){
     TEST("Large alloc after freeing everything", big2 != NULL);
 
     printf("\n======== ALL TESTS COMPLETE ========\n");
+    free(heap);
+
     return 0;
 }
