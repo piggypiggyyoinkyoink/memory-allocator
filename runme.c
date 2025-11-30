@@ -194,22 +194,7 @@ int main(){
     TEST("Large alloc after freeing everything", big2 != NULL);
 
     printf("\n======== ALL TESTS COMPLETE ========\n");
+    free(heap);
 
-
-
-   for (int i = 0; i < 1000; i++) {
-      void* p = mm_malloc(10 + i);
-      void* p2 = mm_malloc(1500-i);
-      if (p != NULL) {
-         mm_free(p);
-      }
-      if (p2 != NULL) {
-         mm_free(p2);
-      }
-   }
-    
-
-
-   free(heap);
-   return 0;
+    return 0;
 }

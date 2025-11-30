@@ -459,7 +459,9 @@ void merge_node(struct Node* nodePtr) {
         overwrite_data(prevNode.data, newSize);//TODO: fix this to use get_node_data
 
     } else if (get_node_state(prevNodePtr) == FREE) { //something is freeing the head and causing breakages
+        // get new size of merged node
         size_t newSize = (size_t)((uint8_t*)get_node_next(currentNodePtr) - (uint8_t*)get_node_data(prevNodePtr));
+
         // "delete" redundant node (just update prev and next ptrs)
         delete_node(currentNodePtr);
         prevNode = *prevNodePtr;  // IMPORTANT: delete_node() changes the pointers of the nodes on the heap so these changes need to be updated in the prevNode variable so they arent overwritten
