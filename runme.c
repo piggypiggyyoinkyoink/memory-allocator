@@ -1,26 +1,27 @@
+// Copyright [year] <Copyright Owner>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "allocator.h"
 #include <assert.h>
 #include <string.h>
+#include "./allocator.h"
 // Helper for printing PASS/FAIL
 #define TEST(name, expr) do { \
     printf("\nTEST %-40s : ", name); \
     if (expr) printf("PASS\n"); \
     else      printf("FAIL\n"); \
-} while(0)
-int main(){
+} while (0)
+int main() {
     uint8_t *heap = malloc(16000*sizeof(uint8_t));
 
-    //define 5-bit pattern
+    // define 5-bit pattern
     uint8_t p1 = 0;
     uint8_t p2 = 1;
     uint8_t p3 = 2;
     uint8_t p4 = 4;
     uint8_t p5 = 8;
-    //set pattern in all bytes in heap
-    for (int i=0; i<16000; i+=5){
+    // set pattern in all bytes in heap
+    for (int i = 0; i < 16000; i += 5) {
         *(heap+i) = p1;
         *(heap+i+1) = p2;
         *(heap+i+2) = p3;
@@ -39,7 +40,7 @@ int main(){
 
     printf("\n\nAllocating ptr3");
     void* ptr3 = mm_malloc(700);
-    if (ptr3 != NULL){
+    if (ptr3 != NULL) {
         mm_free(ptr3);
     }
     printf("\n\nFreeing ptr");
@@ -60,8 +61,8 @@ int main(){
     mm_free(ptr5);
 
     printf("\n\nAllocating ptr8");
-    void* ptr8 = mm_malloc(560);//should fail
-    if (ptr8 != NULL){
+    void* ptr8 = mm_malloc(56000);  // should fail
+    if (ptr8 != NULL) {
         mm_free(ptr8);
     }
     printf("\n\nFreeing ptr6");
@@ -80,7 +81,6 @@ int main(){
     printf("\n\nFreeing ptr4 (double-free test)");
     mm_free(ptr4);
     mm_free((void*)2);
-    printf("\nHeapPtr: %p, PTR: %p, ptr2: %p, ptr4: %p, ptr5: %p", heap, ptr, ptr2, ptr4, ptr5);
 
     printf("\n[2] Testing basic allocation...\n");
 
@@ -88,7 +88,7 @@ int main(){
     TEST("mm_malloc(32) != NULL", a != NULL);
 
     /* ----------------------------------------------------
-       TEST 2: Write and Read
+        TEST 2: Write and Read
     ---------------------------------------------------- */
     printf("\n[3] Testing write/read...\n");
 
@@ -97,14 +97,14 @@ int main(){
 
     char bufff[32];
     memset(bufff, 0, sizeof(bufff));
-    int numB2 = mm_read(a, 5,bufff, sizeof(msg));
+    int numB2 = mm_read(a, 5, bufff, sizeof(msg));
     printf("\nSIZEOF: %zu", sizeof(msg));
     printf("\nNUMB1: %d", numB1);
     printf("\nNUMB2: %d", numB2);
     TEST("mm_write/mm_read store correct data", strcmp(bufff, msg) == 0);
 
     /* ----------------------------------------------------
-       TEST 3: Allocate multiple blocks
+        TEST 3: Allocate multiple blocks
     ---------------------------------------------------- */
     printf("\n[4] Multi-block allocation...\n");
 
@@ -114,16 +114,16 @@ int main(){
     TEST("Second alloc != NULL", b != NULL);
     TEST("Third alloc != NULL", c != NULL);
 
-    mm_write(b,0, "TESTING-123", 12);
+    mm_write(b, 0, "TESTING-123", 12);
 
     char temp[16];
     memset(temp, 0, sizeof(temp));
-    mm_read(b,0, temp, 12);
+    mm_read(b, 0, temp, 12);
     puts(temp);
     TEST("Second block stores correct data", strcmp(temp, "TESTING-123") == 0);
 
     /* ----------------------------------------------------
-       TEST 4: Free a block
+        TEST 4: Free a block
     ---------------------------------------------------- */
     printf("\n[5] Freeing blocks...\n");
 
@@ -131,7 +131,7 @@ int main(){
     TEST("Free b (no crash)", 1);
 
     /* ----------------------------------------------------
-       TEST 5: Double-free detection
+        TEST 5: Double-free detection
     ---------------------------------------------------- */
     printf("\n[6] Double-free detection...\n");
 
@@ -140,7 +140,7 @@ int main(){
     TEST("Double-free does not crash", 1);
 
     /* ----------------------------------------------------
-       TEST 6: Adjacent block merging
+        TEST 6: Adjacent block merging
     ---------------------------------------------------- */
     printf("\n[7] Testing merge of free blocks...\n");
 
@@ -153,7 +153,7 @@ int main(){
     TEST("Allocator merged free blocks (big alloc != NULL)", big != NULL);
     mm_free(big);
     /* ----------------------------------------------------
-       TEST 7: Out-of-bounds write protection
+        TEST 7: Out-of-bounds write protection
     ---------------------------------------------------- */
     printf("\n[8] Testing out-of-bounds write protection...\n");
 
@@ -165,28 +165,28 @@ int main(){
     // Behavior here depends on your implementation:
     // It should ignore, fail, or clamp the write,
     // but MUST NOT crash.
-    mm_write(xx,0, bigbuff, 9999);
+    mm_write(xx, 0, bigbuff, 9999);
 
     char rbuff[64];
     memset(rbuff, 0, sizeof(rbuff));
-    mm_read(xx,0, rbuff, 16);
+    mm_read(xx, 0, rbuff, 16);
     mm_free(xx);
     // Not checking content — only checking no crash
     TEST("Out-of-bounds write does not crash", 1);
 
     /* ----------------------------------------------------
-       TEST 8: NULL pointer behavior
+        TEST 8: NULL pointer behavior
     ---------------------------------------------------- */
     printf("\n[9] Testing NULL behavior...\n");
 
-    mm_free(NULL);                    // should do nothing
-    mm_write(NULL,0, "A", 1);           // should do nothing
-    mm_read(NULL,0, rbuff, 16);         // should do nothing
+    mm_free(NULL);                          // should do nothing
+    mm_write(NULL, 0, "A", 1);              // should do nothing
+    mm_read(NULL, 0, rbuff, 16);            // should do nothing
 
     TEST("NULL operations do not crash", 1);
 
     /* ----------------------------------------------------
-       TEST 9: Allocate entire heap
+        TEST 9: Allocate entire heap
     ---------------------------------------------------- */
     printf("\n[10] Testing full-heap allocation...\n");
 

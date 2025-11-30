@@ -23,8 +23,8 @@ struct Node{
     struct Node *prev3;  // pointer to previous block
     struct Node *next3;  // pointer to next block
     void *data3;  // pointer to data.
-    uint16_t checksum; //unused
-    uint16_t* garbage; //unused
+    uint16_t checksum;  // unused
+    uint16_t* garbage;  // unused
 };
 
 static struct Node head;
@@ -36,7 +36,7 @@ static uint8_t pattern[5];
 static size_t heapSize;
 static size_t nodeSize = 120;
 
-size_t get_node_size(struct Node* nodePtr){
+size_t get_node_size(struct Node* nodePtr) {
     struct Node n = *(nodePtr);
     size_t correctSize;
     correctSize = (n.size & n.size2) | (n.size & n.size3) | (n.size2 & n.size3);
@@ -45,7 +45,7 @@ size_t get_node_size(struct Node* nodePtr){
     return correctSize;
 }
 
-struct Node* get_node_prev(struct Node* nodePtr){
+struct Node* get_node_prev(struct Node* nodePtr) {
     struct Node n = *(nodePtr);
     uintptr_t prev1 = (uintptr_t) n.prev;
     uintptr_t prev2 = (uintptr_t) n.prev2;
@@ -57,20 +57,20 @@ struct Node* get_node_prev(struct Node* nodePtr){
     return (struct Node*) correctPrev;
 }
 
-struct Node* get_node_next(struct Node* nodePtr){
+struct Node* get_node_next(struct Node* nodePtr) {
     struct Node n = *(nodePtr);
     uintptr_t next1 = (uintptr_t) n.next;
     uintptr_t next2 = (uintptr_t) n.next2;
     uintptr_t next3 = (uintptr_t) n.next3;
 
     uintptr_t correctNext = (next1 & next2) | (next1 & next3) | (next2 & next3);
-    //printf("\ncorrectNext: %p", (struct Node*) correctNext);
+    // printf("\ncorrectNext: %p", (struct Node*) correctNext);
     n.next = n.next2 = n.next3 = (struct Node*) correctNext;
     *(nodePtr) = n;
     return (struct Node*) correctNext;
 }
 
-void* get_node_data(struct Node* nodePtr){
+void* get_node_data(struct Node* nodePtr) {
     struct Node n = *(nodePtr);
     uintptr_t data1 = (uintptr_t) n.data;
     uintptr_t data2 = (uintptr_t) n.data2;
@@ -82,16 +82,16 @@ void* get_node_data(struct Node* nodePtr){
     return (void*) correctData;
 }
 
-uint8_t get_node_state(struct Node* nodePtr){
+uint8_t get_node_state(struct Node* nodePtr) {
     struct Node n = *(nodePtr);
     uint8_t state = n.state;
     uint8_t count = 0;
     for (int i = 0; i < 8; i++) {
         count += (state >> i) & 1;
     }
-    if (count >= 4){
+    if (count >= 4) {
         n.state = UNFREE;
-    }else{
+    } else {
         n.state = FREE;
     }
     *(nodePtr) = n;
@@ -100,19 +100,24 @@ uint8_t get_node_state(struct Node* nodePtr){
 
 
 
-int is_valid_pointer(void* ptr, int sentinels_valid){
-    if (sentinels_valid){
-        if (((uint8_t*)ptr) < (heapPtr) || ((uint8_t*)ptr) > (heapPtr + heapSize-sizeof(struct Node))) {
+int is_valid_pointer(void* ptr, int sentinels_valid) {
+    if (sentinels_valid) {
+        if (((uint8_t*)ptr) < (heapPtr)
+        || ((uint8_t*)ptr) > (heapPtr + heapSize-sizeof(struct Node))
+        ) {
             printf("\nINVALID POINTER nsi");
             return 0;
-        }else{
+        } else {
             return 1;
         }
-    }else{
-        if (((uint8_t*)ptr) < (heapPtr+sizeof(struct Node)-1) || ((uint8_t*)ptr) >= (heapPtr + heapSize - 2*sizeof(struct Node))) {
+    } else {
+        if (
+            ((uint8_t*)ptr) < (heapPtr+sizeof(struct Node)-1)
+            || ((uint8_t*)ptr) >= (heapPtr + heapSize - 2*sizeof(struct Node))
+        ) {
             printf("\nINVALID POINTER si");
             return 0;
-        }else{
+        } else {
             return 1;
         }
     }
@@ -132,8 +137,14 @@ int get_checksum(uint8_t* dataPtr, size_t size) {
 // Returns 0 on success, non-zero on failure.
 int mm_init(uint8_t *heap, size_t heap_size) {
     // initialise head and ass senitnels
-    head.size = head.size2 = head.size3 =0; head.state = UNFREE; head.prev = head.prev2 = head.prev3 = NULL; head.next = head.next2 = head.next3 = NULL;
-    ass.size = ass.size2 = ass.size3 = 0; ass.state = UNFREE; ass.prev = ass.prev2 = ass.prev3 = NULL; ass.next = ass.next2 = ass.next3 = NULL;
+    head.size = head.size2 = head.size3 = 0;
+    head.state = UNFREE;
+    head.prev = head.prev2 = head.prev3 = NULL;
+    head.next = head.next2 = head.next3 = NULL;
+    ass.size = ass.size2 = ass.size3 = 0;
+    ass.state = UNFREE;
+    ass.prev = ass.prev2 = ass.prev3 = NULL;
+    ass.next = ass.next2 = ass.next3 = NULL;
 
     if (heap_size < (3*sizeof(struct Node))) {
         // not enough heap space to do anything
@@ -154,9 +165,13 @@ int mm_init(uint8_t *heap, size_t heap_size) {
     heapSize = heap_size;
 
     // initialise initial data node
-    struct Node heapNode = {(heap_size - 3*sizeof(struct Node)), FREE, NULL, NULL, (int*)heap };
+    struct Node heapNode = {
+        (heap_size - 3*sizeof(struct Node)), FREE, NULL, NULL, (int*)heap
+    };
     heapPtr = heap;
-    heapNode.size = heapNode.size2 = heapNode.size3 = (heap_size - 3*sizeof(struct Node));
+    heapNode.size = heapNode.size2 = heapNode.size3 = (
+        heap_size - 3*sizeof(struct Node));
+
     heapNode.checksum = 0;
     // Initialise pointers to nodes on the heap
 
@@ -164,11 +179,12 @@ int mm_init(uint8_t *heap, size_t heap_size) {
     struct Node *heapHeadPtr = (struct Node *) heap;
 
     // put the ass  at the end of the heap
-    // struct Node *heapAssPtr = (struct Node *) (((uint8_t *)heap + (heap_size-1)) - sizeof(ass) );
-    struct Node *heapAssPtr = (struct Node *)((uint8_t *)heap + heap_size - sizeof(struct Node));
+    struct Node *heapAssPtr = (struct Node *)(
+        (uint8_t *)heap + heap_size - sizeof(struct Node));
 
     // put heapNode in the middle
-    struct Node *heapContentsPtr = (struct Node *) ((uint8_t *)heap + sizeof(head));
+    struct Node *heapContentsPtr = (struct Node *)(
+        (uint8_t *)heap + sizeof(head));
 
     // set the prev and next pointers for each node
     head.next = head.next2 = head.next3 = heapContentsPtr;
@@ -176,13 +192,14 @@ int mm_init(uint8_t *heap, size_t heap_size) {
     heapNode.prev = heapNode.prev2 = heapNode.prev3 = heapHeadPtr;
     heapNode.next = heapNode.next2 = heapNode.next3 = heapAssPtr;
     // set data pointer to point to where the actual data starts
-    heapNode.data = heapNode.data2 = heapNode.data3 = (void *)((uint8_t *)heapContentsPtr + sizeof(heapNode));
-    //heapNode.checksum = 0;
+    heapNode.data = heapNode.data2 = heapNode.data3 = (void *)(
+        (uint8_t *)heapContentsPtr + sizeof(heapNode));
+
     // write nodes to the heap
     *heapHeadPtr = head;
     *heapAssPtr = ass;
     *heapContentsPtr = heapNode;
-    //write head and ass pointers to global vars
+    //  write head and ass pointers to global vars
     headPtr = heapHeadPtr;
     assPtr = heapAssPtr;
     printf("\nSIZE OF NODE: %zu", sizeof(struct Node));
@@ -197,7 +214,7 @@ int mm_init(uint8_t *heap, size_t heap_size) {
 void resize_node(struct Node* nodePtr, size_t size) {
     // initialise current node as n
     struct Node n = *(nodePtr);
-    
+
     if (get_node_size(nodePtr) < size) {
         printf("\nOH FUCK");
     }
@@ -205,17 +222,23 @@ void resize_node(struct Node* nodePtr, size_t size) {
     struct Node newNode;
     newNode.state = FREE;
     *(nodePtr) = n;
-    newNode.size = newNode.size2 = newNode.size3 = (get_node_size(nodePtr) - (size + sizeof(struct Node)));
+    newNode.size = newNode.size2 = newNode.size3 = (
+        get_node_size(nodePtr) - (size + sizeof(struct Node)));
+
     // update current node size
     n.size = n.size2 = n.size3 = size;
     // get the correct pointer for the new node
-    struct Node* newNodePtr = (struct Node*)((uint8_t*)nodePtr + size + sizeof(struct Node));
+    struct Node* newNodePtr = (struct Node*)(
+        (uint8_t*)nodePtr + size + sizeof(struct Node));
+
     // initialise data pointer for new node
-    newNode.data = newNode.data2 = newNode.data3 = (void *)((uint8_t *)newNodePtr + sizeof(struct Node));
+    newNode.data = newNode.data2 = newNode.data3 = (void *)(
+        (uint8_t *)newNodePtr + sizeof(struct Node));
+
     printf("\nNEW NODE DATA PTR: %p", newNode.data);
     // get next node
     struct Node* nextNodePtr = (struct Node *) get_node_next(nodePtr);
-    
+
     struct Node nextNode = *nextNodePtr;
     // update prev and next pointers
     newNode.prev = newNode.prev2 = newNode.prev3 = nodePtr;
@@ -253,19 +276,26 @@ void *mm_malloc(size_t size) {
     // check all nodes until we find a free one of sufficient size, or reach ass
     while ((!end) && (!found)) {
         printf("\n CURRENT NODE SIZE: %zu", get_node_size(currentNodePtr));
-        if (get_node_state(currentNodePtr) == FREE && get_node_size(currentNodePtr) >= size) {
+        if (
+            get_node_state(currentNodePtr) == FREE
+            && get_node_size(currentNodePtr) >= size
+        ) {
             // resize and allocate this node
             printf("\nMEMORY BLOCK FOUND");
             currentNode.state = UNFREE;  // unfree the node
             *currentNodePtr = currentNode;  // write back to heap
-            if (get_node_size(currentNodePtr) > aligned_size + sizeof(struct Node)) {
+            if (
+                get_node_size(currentNodePtr)
+                > aligned_size + sizeof(struct Node)
+            ) {
                 // resize node so there is some heap left for everything else
-                // use aligned size to ensure the new node generated by resize_node is also aligned
+                // use aligned size here so new node is aligned
                 printf("\nNODE RESIZED");
                 resize_node(currentNodePtr, aligned_size);
             }
             currentNode = *currentNodePtr;
-            currentNode.size = currentNode.size2 = currentNode.size3 = size;  // reset the size to the correct size passed into mm_malloc to ensure API conformity
+            // reset the size to the requested size to ensure API conformity
+            currentNode.size = currentNode.size2 = currentNode.size3 = size;
 
             memset(get_node_data(currentNodePtr), 0, currentNode.size);
             found = 1;
@@ -294,8 +324,8 @@ void *mm_malloc(size_t size) {
 
 
 
-// Safely read data from an allocated block starting at offset bytes into buf.
-// Returns the number of bytes read, or -1 if corruption or invalid pointer detected.
+// Safely read data from an allocated block starting at offset bytes into buf
+// Returns the num of bytes read, or -1 if corruption or invalid ptr detected
 int mm_read(void *ptr, size_t offset, void *buf, size_t len) {
     ptr = (void*)((uint8_t*)ptr - sizeof(struct Node));  // data ptr to node ptr
     // return if pointer invalid
@@ -305,7 +335,14 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len) {
     }
     struct Node* nodePtr = ptr;
     struct Node n = *nodePtr;
-    if (get_checksum(get_node_data(nodePtr), get_node_size(nodePtr)) != n.checksum) {
+    // i hate cpplint
+    if (
+        get_checksum(
+            get_node_data(nodePtr),
+            get_node_size(nodePtr)
+        )
+        != n.checksum
+    ) {
         printf("\nDATA CORRUPTION DETECTED IN MM_READ");
         return -1;
     }
@@ -334,8 +371,7 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len) {
     // apply offset
     dataPtr += offset;
 
-    // for (size_t i = offset; i<(size-offset); i++){//should this be len instead of size-offset??
-    for (size_t i = 0; i < len; i++) {  // should this be len instead of size-offset??
+    for (size_t i = 0; i < len; i++) {
         *(buff+i) = *(dataPtr+i);
         // printf("\n%d", *(buff+i));
         numBytes++;
@@ -347,7 +383,7 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len) {
 
 
 // Safely write data into an allocated block starting at offset bytes from src.
-// Returns the number of bytes written, or -1 if corruption or invalid pointer detected.
+// Returns the num of bytes written, or -1 if corruption or invalid ptr detected
 int mm_write(void *ptr, size_t offset, const void *src, size_t len) {
     ptr = (void*)((uint8_t*)ptr - sizeof(struct Node));  // data ptr to node ptr
 
@@ -374,7 +410,6 @@ int mm_write(void *ptr, size_t offset, const void *src, size_t len) {
     }
     // write data 1 byte at a time
     int numBytes = 0;
-    // for (size_t i = offset; i<(size-offset); i++){//should this be len instead of size-offset??
 
     // apply offset
     dataPtr += offset;
@@ -386,15 +421,13 @@ int mm_write(void *ptr, size_t offset, const void *src, size_t len) {
     uint16_t checksum = get_checksum((uint8_t*)src, len);
     n.checksum = checksum;
     *nodePtr = n;
-
-
     return numBytes;
 }
 
 
 
 
-// doesnt actually delete the node but updates the pointers of previous and next nodes so that logically it ceases to exist.
+// updates the pointers of previous and next nodes to "delete" the node.
 void delete_node(struct Node* nodePtr) {
     struct Node* currentNodePtr = nodePtr;
     struct Node currentNode = *nodePtr;
@@ -444,9 +477,16 @@ void merge_node(struct Node* nodePtr) {
     struct Node nextNode = *nextNodePtr;
     struct Node* prevNodePtr = currentNode.prev;
     struct Node prevNode = *prevNodePtr;
-    if ((get_node_state(prevNodePtr) == FREE) && (get_node_state(nextNodePtr) == FREE) && (get_node_prev(prevNodePtr) != NULL) && (get_node_next(nextNodePtr) != NULL)) {  // should probs use a separate function to check freeness that can be applied anywhere and takes bitflips into acc.
+    if (
+        (get_node_state(prevNodePtr) == FREE)
+        && (get_node_state(nextNodePtr) == FREE)
+        && (get_node_prev(prevNodePtr) != NULL)
+        && (get_node_next(nextNodePtr) != NULL)
+    ) {
         // get new size of merged node
-        size_t newSize = (size_t)((uint8_t*)get_node_next(nextNodePtr) - (uint8_t*)get_node_data(prevNodePtr));
+        size_t newSize = (size_t)(
+            (uint8_t*)get_node_next(nextNodePtr)
+            - (uint8_t*)get_node_data(prevNodePtr));
         printf("\nB1: NEW SIZE AFTER MERGE: %zu", newSize);
         // "delete" redundant nodes (just update prev and next ptrs)
         delete_node(currentNodePtr);
@@ -457,15 +497,19 @@ void merge_node(struct Node* nodePtr) {
         // update heap
         *prevNodePtr = prevNode;
         // fill with 5B pattern
-        overwrite_data(prevNode.data, newSize);//TODO: fix this to use get_node_data
+        // to do: fix this to use get_node_data
+        overwrite_data(prevNode.data, newSize);
 
-    } else if (get_node_state(prevNodePtr) == FREE) { //something is freeing the head and causing breakages
+    } else if (get_node_state(prevNodePtr) == FREE) {
         // get new size of merged node
-        size_t newSize = (size_t)((uint8_t*)get_node_next(currentNodePtr) - (uint8_t*)get_node_data(prevNodePtr));
+        size_t newSize = (size_t)(
+            (uint8_t*)get_node_next(currentNodePtr)
+            - (uint8_t*)get_node_data(prevNodePtr));
 
         // "delete" redundant node (just update prev and next ptrs)
         delete_node(currentNodePtr);
-        prevNode = *prevNodePtr;  // IMPORTANT: delete_node() changes the pointers of the nodes on the heap so these changes need to be updated in the prevNode variable so they arent overwritten
+        // update the prev and next ptrs from delete_node()
+        prevNode = *prevNodePtr;
         // update size
         prevNode.size = prevNode.size2 = prevNode.size3 = newSize;
         // updates heap
@@ -473,7 +517,9 @@ void merge_node(struct Node* nodePtr) {
         // fill with 5B pattern
         overwrite_data(prevNode.data, newSize);
     } else if (get_node_state(nextNodePtr) == FREE) {
-        size_t newSize = (size_t)((uint8_t*)get_node_next(nextNodePtr) - (uint8_t*)get_node_data(currentNodePtr));
+        size_t newSize = (size_t)(
+            (uint8_t*)get_node_next(nextNodePtr)
+            - (uint8_t*)get_node_data(currentNodePtr));
 
         delete_node(nextNodePtr);
         currentNode = *currentNodePtr;
@@ -486,7 +532,6 @@ void merge_node(struct Node* nodePtr) {
     }
     return;
 }
-
 
 
 
@@ -514,7 +559,11 @@ void mm_free(void *ptr) {
     // return if prev or next pointers are invalid
     printf("\n%p", get_node_prev(nodePtr));
     printf("\n%p", get_node_next(nodePtr));
-    if (!is_valid_pointer(get_node_prev(nodePtr), 1) || !is_valid_pointer(get_node_next(nodePtr), 1)) {
+    if (
+        !is_valid_pointer(get_node_prev(nodePtr), 1)
+        ||
+        !is_valid_pointer(get_node_next(nodePtr), 1)
+    ) {
         printf("\nINVALID PREV/NEXT POINTER");
         return;
     }
