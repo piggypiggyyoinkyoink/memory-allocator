@@ -118,6 +118,16 @@ int is_valid_pointer(void* ptr, int sentinels_valid){
     }
 }
 
+
+
+int get_checksum(uint8_t* dataPtr, size_t size) {
+    uint16_t checksum = 0;
+    for (size_t i = 0; i < size; i++) {
+        checksum += *(dataPtr + i);
+    }
+    return checksum;
+}
+
 // Initialize the allocator over a provided memory block.
 // Returns 0 on success, non-zero on failure.
 int mm_init(uint8_t *heap, size_t heap_size) {
@@ -147,6 +157,7 @@ int mm_init(uint8_t *heap, size_t heap_size) {
     struct Node heapNode = {(heap_size - 3*sizeof(struct Node)), FREE, NULL, NULL, (int*)heap };
     heapPtr = heap;
     heapNode.size = heapNode.size2 = heapNode.size3 = (heap_size - 3*sizeof(struct Node));
+    heapNode.checksum = 0;
     // Initialise pointers to nodes on the heap
 
     // put the head at the start of the heap
@@ -258,6 +269,7 @@ void *mm_malloc(size_t size) {
 
             memset(get_node_data(currentNodePtr), 0, currentNode.size);
             found = 1;
+            currentNode.checksum = 0;
             *currentNodePtr = currentNode;
             printf("\nALLOCATION SUCCESSFUL");
             // get data ptr to return
@@ -293,6 +305,13 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len) {
     }
     struct Node* nodePtr = ptr;
     struct Node n = *nodePtr;
+    if (get_checksum(get_node_data(nodePtr), get_node_size(nodePtr)) != n.checksum) {
+        printf("\nDATA CORRUPTION DETECTED IN MM_READ");
+        return -1;
+    }
+
+
+
     uint8_t* dataPtr = (uint8_t*)get_node_data(nodePtr);
     uint8_t* buff = (uint8_t*)buf;
     size_t size = get_node_size(nodePtr);
@@ -363,6 +382,12 @@ int mm_write(void *ptr, size_t offset, const void *src, size_t len) {
         *(dataPtr+i) = *(source+i);
         numBytes++;
     }
+
+    uint16_t checksum = get_checksum((uint8_t*)src, len);
+    n.checksum = checksum;
+    *nodePtr = n;
+
+
     return numBytes;
 }
 
