@@ -18,10 +18,9 @@ struct Node{
     size_t size3;  // size of memory block
     struct Node *prev3;  // pointer to previous block
     uint16_t checksum;  // checksum
-    uint8_t* a;
-    uint16_t b;
-    uint8_t c;
-
+    uint8_t* a;  // garbage for alignment purposes
+    uint16_t b;  // garbage for alignment purposes
+    uint8_t c;  // garbage for alignment purposes
 };
 
 
@@ -96,17 +95,19 @@ size_t get_node_size(struct Node* nodePtr) {
 
 struct Node* get_node_next(struct Node* nodePtr) {
     struct Node n = *(nodePtr);
-    if ((uintptr_t)nodePtr >= ((uintptr_t)assPtr - sizeof(struct Node))){ 
+    if ((uintptr_t)nodePtr >= ((uintptr_t)assPtr - sizeof(struct Node))) {
         return NULL;
     }
-    if (get_node_size(nodePtr)%40 == 0){
+    if (get_node_size(nodePtr)%40 == 0) {
         size_t tmp = get_node_size(nodePtr);
-        struct Node* correctNext = (struct Node*)((uint8_t*)nodePtr + sizeof(struct Node) + tmp);
+        struct Node* correctNext = (struct Node*)(
+            (uint8_t*)nodePtr + sizeof(struct Node) + tmp);
         return correctNext;
     }
     size_t tmp = get_node_size(nodePtr) + (40 - get_node_size(nodePtr)%40);
-    struct Node* correctNext = (struct Node*)((uint8_t*)nodePtr + sizeof(struct Node) + tmp);
-    if (!is_valid_pointer((void*)correctNext, 1)){
+    struct Node* correctNext = (struct Node*)(
+        (uint8_t*)nodePtr + sizeof(struct Node) + tmp);
+    if (!is_valid_pointer((void*)correctNext, 1)) {
         return assPtr;
     }
     return correctNext;
@@ -115,13 +116,15 @@ struct Node* get_node_next(struct Node* nodePtr) {
 
 
 
-struct Node* fix_ptr(struct Node* nodePtr){
+struct Node* fix_ptr(struct Node* nodePtr) {
     printf("\nFIXING PTR");
     // Corrupted prev ptr: try working forwards from head
     // to get to nodePtr and repair
     struct Node* currentNodePtr = headPtr;
     struct Node* prevNodePtr = NULL;
-    while ((get_node_next(currentNodePtr) != nodePtr) && (currentNodePtr != assPtr) && (is_valid_pointer(currentNodePtr, 1))){
+    while ((get_node_next(currentNodePtr) != nodePtr)
+    && (currentNodePtr != assPtr)
+    && (is_valid_pointer(currentNodePtr, 1))) {
         prevNodePtr = currentNodePtr;
         currentNodePtr = get_node_next(currentNodePtr);
     }
@@ -132,10 +135,12 @@ struct Node* fix_ptr(struct Node* nodePtr){
         struct Node newPrevNode = *(prevNodePtr);
 
         // Look where the corrupted node should be
-        struct Node* corrputedNodePtr = (struct Node*)(prevNodePtr + sizeof(struct Node) + get_node_size(prevNodePtr));
+        struct Node* corrputedNodePtr = (struct Node*)(
+            prevNodePtr + sizeof(struct Node) + get_node_size(prevNodePtr));
         // check there is room to rebuild corrupted node
 
-        if ((size_t)((corrputedNodePtr) - (prevNodePtr)) < sizeof(struct Node)){
+        if ((size_t)((corrputedNodePtr) - (prevNodePtr))
+        < sizeof(struct Node)) {
             // not enough room to rebuild corrupted node
             // bypass corrupted area
             n.prev = n.prev2 = n.prev3 = prevNodePtr;
@@ -145,12 +150,12 @@ struct Node* fix_ptr(struct Node* nodePtr){
             do {
                 *(prevNodePtr) = newPrevNode;
             } while (!check_node(prevNodePtr, newPrevNode));
-            return prevNodePtr; 
+            return prevNodePtr;
         }
         // attempt to read corrupted node metadata
         struct Node corruptedNode = *(corrputedNodePtr);
 
-        if (get_node_next(corrputedNodePtr) == nodePtr){
+        if (get_node_next(corrputedNodePtr) == nodePtr) {
             // we know then that this is the correct node
             n.prev = n.prev2 = n.prev3 = corrputedNodePtr;
             do {
@@ -169,11 +174,13 @@ struct Node* fix_ptr(struct Node* nodePtr){
             struct Node newNode;
             struct Node* newNodePtr = corrputedNodePtr;
             newNode.state = FREE;
-            // nodeptr - prevnodeptr - size(prevnodeptr) - size of node metadata - size of newnode metadata
+            // calculate new node size
+            // i hate cpplint
             newNode.size = newNode.size2 = newNode.size3 = (
-                (size_t)((nodePtr) - (prevNodePtr + get_node_size(prevNodePtr) + 2*sizeof(struct Node))));
+                (size_t)(
+                    (nodePtr) - (prevNodePtr + get_node_size(prevNodePtr)
+                    + 2*sizeof(struct Node))));
             newNode.prev = newNode.prev2 = newNode.prev3 = prevNodePtr;
-            
             n.prev = n.prev2 = n.prev3 = newNodePtr;
             do {
                 *(nodePtr) = n;
@@ -187,7 +194,7 @@ struct Node* fix_ptr(struct Node* nodePtr){
             return newNodePtr;
         }
     }
-    if (currentNodePtr == headPtr){
+    if (currentNodePtr == headPtr) {
         // this would mean our current node doesnt exist
         // return headPtr bc idk
         printf("\nCOULD NOT FIX PTR, VERY VERY BAD");
@@ -218,7 +225,6 @@ struct Node* get_node_prev(struct Node* nodePtr) {
 
     uintptr_t correctPrev = (prev1 & prev2) | (prev1 & prev3) | (prev2 & prev3);
     if (is_valid_pointer((void*)correctPrev, 1) || (void*)correctPrev == NULL) {
-
         n.prev = n.prev2 = n.prev3 = (struct Node*) correctPrev;
         do {
             *(nodePtr) = n;
@@ -728,7 +734,7 @@ void mm_free(void *ptr) {
     // return if prev or next pointers are invalid
     printf("\n%p", get_node_prev(nodePtr));
     printf("\n%p", get_node_next(nodePtr));
-    
+
     if (
         !is_valid_pointer(get_node_prev(nodePtr), 1)
         ||
@@ -737,7 +743,7 @@ void mm_free(void *ptr) {
         printf("\nINVALID PREV/NEXT POINTER");
         return;
     }
-    
+
     // check for double free
     if (get_node_state(nodePtr) != UNFREE) {
         printf("\nCANNOT FREE NON-UNFREE NODE");
