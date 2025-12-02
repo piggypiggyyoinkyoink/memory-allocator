@@ -483,8 +483,7 @@ void merge_node(struct Node* nodePtr) {
     if (
         (get_node_state(prevNodePtr) == FREE)
         && (get_node_state(nextNodePtr) == FREE)
-        && (get_node_prev(prevNodePtr) != NULL)
-        && (get_node_next(nextNodePtr) != NULL)
+        
     ) {
         struct Node currentNode = *currentNodePtr;
         struct Node nextNode = *nextNodePtr;
@@ -622,6 +621,7 @@ void *mm_realloc(void *ptr, size_t new_size) {
 
     if (old_size == new_size) {
         // no resizing needed
+        printf("\nREALLOC: NODE UNCHANGED");
         return get_node_data(nodePtr);
     } else if (new_size < old_size) {
         // node needs shrinking
@@ -647,10 +647,12 @@ void *mm_realloc(void *ptr, size_t new_size) {
             do {
                 *nodePtr = n;
             } while (!check_node(nodePtr, n));
+            printf("\nREALLOC: NODE SHRUNK");
             return get_node_data(nodePtr);
 
         } else {
             // not enough room to create a new node, leave node unchanged
+            printf("\nREALLOC: NODE UNCHANGED");
             return get_node_data(nodePtr);
         }
     } else {
@@ -694,6 +696,7 @@ void *mm_realloc(void *ptr, size_t new_size) {
             do {
                 *nodePtr = n;
             } while (!check_node(nodePtr, n));
+            printf("\nREALLOC: NODE EXPANDED INTO NEXT");
             return get_node_data(nodePtr);
         } else {
             // look elsewhere
@@ -717,7 +720,7 @@ void *mm_realloc(void *ptr, size_t new_size) {
                 do {
                     *newNodePtr = newNode;
                 } while (!check_node(newNodePtr, newNode));
-
+                printf("\nREALLOC: NEW BLOCK ALLOCATED");
                 return newPtr;
             }
         }
