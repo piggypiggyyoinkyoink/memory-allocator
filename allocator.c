@@ -9,6 +9,7 @@
 #define FREE 0
 #define UNFREE 255
 
+// define metadata nodes in singly linked list
 struct Node{
     size_t size;  // size of memory block
     uint8_t state;  // free or not free
@@ -90,16 +91,19 @@ struct Node* get_node_next(struct Node* nodePtr) {
     if ((uintptr_t)nodePtr >= ((uintptr_t)assPtr - sizeof(struct Node))) {
         return NULL;
     }
+    // no alignment padding
     if (get_node_size(nodePtr)%40 == 0) {
         size_t tmp = get_node_size(nodePtr);
         struct Node* correctNext = (struct Node*)(
             (uint8_t*)nodePtr + sizeof(struct Node) + tmp);
         return correctNext;
     }
+    // add alignment padding to get correct next ptr
     size_t tmp = get_node_size(nodePtr) + (40 - get_node_size(nodePtr)%40);
     struct Node* correctNext = (struct Node*)(
         (uint8_t*)nodePtr + sizeof(struct Node) + tmp);
     if (!is_valid_pointer((void*)correctNext, 1)) {
+        // this should never run but may prevent segfault if data mega corrupted
         return assPtr;
     }
     return correctNext;
@@ -373,14 +377,11 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len) {
         printf("CANNOT WRITE TO FREE BLOCK");
         return -1;
     }
-    // nuh uh if buf isnt big enough to store the data
-    /*
-    if (len < (size-offset)){
-        printf("BUF TOO SMALL");
-
+    // nuh uh if try to read too much
+    if (len > (size-offset)) {
+        printf("READ GOES OUT OF BOUNDS");
         return -1;
     }
-    */
 
     // read data 1 byte at a time
     int numBytes = 0;
@@ -596,4 +597,124 @@ void mm_free(void *ptr) {
 
     printf("\nSUCCESSFULLY FREED BLOCK OF SIZE %zu", size);
     return;
+}
+
+// Resize a previously allocated block to new_size bytes,
+// preserving data. [See additional credit]
+void *mm_realloc(void *ptr, size_t new_size) {
+    if (ptr == NULL || !is_valid_pointer(ptr, 0)) {
+        printf("\nINVALID POINTER IN MM_REALLOC");
+        return NULL;
+    }
+    if (new_size == 0) {
+        printf("\nCANNOT REALLOC TO SIZE 0");
+        return NULL;
+    }
+    ptr = (void*)((uint8_t*)ptr - sizeof(struct Node));  // data ptr to node ptr
+
+
+    struct Node* nodePtr = ptr;
+    struct Node n = *nodePtr;
+    size_t old_size = get_node_size(nodePtr);
+
+    if (old_size == new_size) {
+        // no resizing needed
+        return get_node_data(nodePtr);
+    } else if (new_size < old_size) {
+        // node needs shrinking
+        if (
+            (old_size - new_size)
+            > sizeof(struct Node)
+        ) {
+            // resize node to smaller size if sufficient space
+            size_t aligned_size;
+            if (new_size %40 != 0) {
+                aligned_size = new_size + (40 - (new_size%40));
+            } else {
+                aligned_size = new_size;
+            }
+            resize_node(nodePtr, aligned_size);
+            n = *nodePtr;
+            n.size = n.size2 = n.size3 = new_size;
+            n.checksum = get_checksum(
+                (uint8_t*)get_node_data(nodePtr), new_size);
+            do {
+                *nodePtr = n;
+            } while (!check_node(nodePtr, n));
+            return get_node_data(nodePtr);
+
+        } else {
+            // not enough room to create a new node, leave node unchanged
+            return get_node_data(nodePtr);
+        }
+    } else {
+        // node needs expanding
+        struct Node* nextNodePtr = get_node_next(nodePtr);
+        struct Node nextNode = *nextNodePtr;
+        // check if next node is free and has enough space
+        if (
+            (get_node_state(nextNodePtr) == FREE)
+            && ((old_size + sizeof(struct Node)
+            + get_node_size(nextNodePtr)) >= new_size)
+        ) {
+            // merge with next node
+            size_t combined_size =
+                old_size + sizeof(struct Node) + get_node_size(nextNodePtr);
+            size_t aligned_size;
+            n.size = n.size2 = n.size3 = combined_size;
+            do {
+                *nodePtr = n;
+            } while (!check_node(nodePtr, n));
+            if (combined_size - new_size > sizeof(struct Node)) {
+                if (new_size %40 != 0) {
+                    aligned_size = new_size + (40 - (new_size%40));
+                } else {
+                    aligned_size = new_size;
+                }
+                // resize if enough space left over
+                printf("\naligned size %zu", aligned_size);
+                printf("\ncombined size %zu", combined_size);
+                printf("\nnew size %zu", new_size);
+                printf("\nnode size %zu", get_node_size(nodePtr));
+                resize_node(nodePtr, aligned_size);
+                n = *nodePtr;
+                n.size = n.size2 = n.size3 = new_size;
+                n.checksum = get_checksum(
+                    (uint8_t*)get_node_data(nodePtr), new_size);
+
+            } else {
+                n.checksum = get_checksum(
+                    (uint8_t*)get_node_data(nodePtr), combined_size);
+            }
+
+            do {
+                *nodePtr = n;
+            } while (!check_node(nodePtr, n));
+            return get_node_data(nodePtr);
+        } else {
+            // look elsewhere
+            void* newPtr = mm_malloc(new_size);
+            struct Node* newNodePtr = (struct Node*)(
+                (uint8_t*)newPtr - sizeof(struct Node));
+            struct Node newNode = *newNodePtr;
+            if (newPtr == NULL) {
+                // allocation failed
+                return NULL;
+            } else {
+                // copy data to new block
+                mm_read(get_node_data(nodePtr), 0,
+                    newPtr, old_size);
+
+                // free old block
+                mm_free(get_node_data(nodePtr));
+                newNode.checksum = get_checksum(
+                    (uint8_t*)newPtr, new_size);
+                do {
+                    *newNodePtr = newNode;
+                } while (!check_node(newNodePtr, newNode));
+
+                return newPtr;
+            }
+        }
+    }
 }
