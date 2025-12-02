@@ -25,8 +25,9 @@ static size_t heapSize;
 static uint8_t pattern[5];
 
 
-
+// check a pointer is within the bounds of the heap
 int is_valid_pointer(void* ptr, int sentinels_valid) {
+    // sentinel pointers are valid
     if (sentinels_valid) {
         if (((uint8_t*)ptr) < (heapPtr)
         || ((uint8_t*)ptr) > (heapPtr + heapSize-sizeof(struct Node))
@@ -36,6 +37,7 @@ int is_valid_pointer(void* ptr, int sentinels_valid) {
         } else {
             return 1;
         }
+    // sentinel pointers not valid (so cant free sentinels by accident)
     } else {
         if (
             ((uint8_t*)ptr) < (heapPtr+sizeof(struct Node)-1)
@@ -70,7 +72,7 @@ int check_node(struct Node* nodePtr, struct Node node) {
 
 
 
-
+// get size of a node, correcting any discrepancies
 size_t get_node_size(struct Node* nodePtr) {
     struct Node n = *(nodePtr);
     size_t correctSize;
@@ -82,7 +84,7 @@ size_t get_node_size(struct Node* nodePtr) {
 
 
 
-
+// use node size to caluclate address of next node
 struct Node* get_node_next(struct Node* nodePtr) {
     struct Node n = *(nodePtr);
     if ((uintptr_t)nodePtr >= ((uintptr_t)assPtr - sizeof(struct Node))) {
@@ -105,7 +107,7 @@ struct Node* get_node_next(struct Node* nodePtr) {
 
 
 
-
+// get previous node ptr by iterating from head until next node is current node
 struct Node* get_node_prev(struct Node* nodePtr) {
     struct Node* currentNodePtr = headPtr;
     while ((get_node_next(currentNodePtr) != nodePtr)
@@ -118,7 +120,7 @@ struct Node* get_node_prev(struct Node* nodePtr) {
 
 
 
-
+// get ptr to node payload data
 void* get_node_data(struct Node* nodePtr) {
     void* correctData = (void*)((uint8_t*)nodePtr + sizeof(struct Node));
     return correctData;
@@ -126,7 +128,7 @@ void* get_node_data(struct Node* nodePtr) {
 
 
 
-
+// determine if node is free or unfree, correcting any discrepancies
 uint8_t get_node_state(struct Node* nodePtr) {
     struct Node n = *(nodePtr);
     uint8_t state = n.state;
@@ -145,7 +147,7 @@ uint8_t get_node_state(struct Node* nodePtr) {
 
 
 
-
+// calculate checksum of data block
 int get_checksum(uint8_t* dataPtr, size_t size) {
     uint16_t checksum = 0;
     for (size_t i = 0; i < size; i++) {
@@ -308,8 +310,8 @@ void *mm_malloc(size_t size) {
             currentNode = *currentNodePtr;
             // reset the size to the requested size to ensure API conformity
             currentNode.size = currentNode.size2 = currentNode.size3 = size;
-
-            // memset(get_node_data(currentNodePtr), 0, currentNode.size);
+            // do not delete this memset as it will fuck up the checksums
+            memset(get_node_data(currentNodePtr), 0, currentNode.size);
             found = 1;
             currentNode.checksum = 0;
             do {
