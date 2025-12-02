@@ -602,6 +602,9 @@ void mm_free(void *ptr) {
 // Resize a previously allocated block to new_size bytes,
 // preserving data. [See additional credit]
 void *mm_realloc(void *ptr, size_t new_size) {
+    printf("\nREALLOCATING BLOCK TO SIZE %zu", new_size);
+
+    // check for null or invalid pointer
     if (ptr == NULL || !is_valid_pointer(ptr, 0)) {
         printf("\nINVALID POINTER IN MM_REALLOC");
         return NULL;
@@ -633,11 +636,14 @@ void *mm_realloc(void *ptr, size_t new_size) {
             } else {
                 aligned_size = new_size;
             }
+            // use aligned size to conform to 40 byte alignment
             resize_node(nodePtr, aligned_size);
-            n = *nodePtr;
+            n = *nodePtr;  // update n after resizing
+            // reset to non-aligned size
             n.size = n.size2 = n.size3 = new_size;
             n.checksum = get_checksum(
                 (uint8_t*)get_node_data(nodePtr), new_size);
+            // rewrite to heap
             do {
                 *nodePtr = n;
             } while (!check_node(nodePtr, n));
@@ -672,13 +678,11 @@ void *mm_realloc(void *ptr, size_t new_size) {
                     aligned_size = new_size;
                 }
                 // resize if enough space left over
-                printf("\naligned size %zu", aligned_size);
-                printf("\ncombined size %zu", combined_size);
-                printf("\nnew size %zu", new_size);
-                printf("\nnode size %zu", get_node_size(nodePtr));
                 resize_node(nodePtr, aligned_size);
-                n = *nodePtr;
+                n = *nodePtr; // update n after resizing
+                // reset to non-aligned size
                 n.size = n.size2 = n.size3 = new_size;
+                // update checksum so mm_read doesnt crashout
                 n.checksum = get_checksum(
                     (uint8_t*)get_node_data(nodePtr), new_size);
 
@@ -707,6 +711,7 @@ void *mm_realloc(void *ptr, size_t new_size) {
 
                 // free old block
                 mm_free(get_node_data(nodePtr));
+                // update checksum of new block
                 newNode.checksum = get_checksum(
                     (uint8_t*)newPtr, new_size);
                 do {
