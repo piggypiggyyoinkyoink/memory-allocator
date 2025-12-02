@@ -192,8 +192,7 @@ int main() {
 
     p31 = mm_realloc(p31, 50);
     TEST("Realloc in the middle", p31 != NULL);
-    p21 = mm_realloc(p21, 40);
-    TEST("Realloc increases size", p21 != NULL);
+    
     p11 = mm_realloc(p11, 31);
     TEST("Realloc decreases size", p11 != NULL);
     void* p51 = mm_malloc(200);
@@ -204,14 +203,16 @@ int main() {
     if (p41 != NULL) {
         mm_free(p41);
     }
+    if (p11 != NULL) {
+        mm_free(p11);
+    }
     if (p31 != NULL) {
         mm_free(p31);
     }
+    p21 = mm_realloc(p21, 140);
+    TEST("Realloc increases size", p21 != NULL);
     if (p21 != NULL) {
         mm_free(p21);
-    }
-    if (p11 != NULL) {
-        mm_free(p11);
     }
     /* ----------------------------------------------------
         TEST 9: Allocate entire heap

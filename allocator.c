@@ -659,8 +659,60 @@ void *mm_realloc(void *ptr, size_t new_size) {
         // node needs expanding
         struct Node* nextNodePtr = get_node_next(nodePtr);
         struct Node nextNode = *nextNodePtr;
+        struct Node* prevNodePtr = get_node_prev(nodePtr);
+        struct Node prevNode = *prevNodePtr;
         // check if next node is free and has enough space
         if (
+            (get_node_state(prevNodePtr) == FREE)
+            && (get_node_state(nextNodePtr) == FREE)
+            && ((old_size + 2* sizeof(struct Node) + get_node_size(nextNodePtr)
+            + get_node_size(prevNodePtr)) >= new_size)
+        ){
+            // merge both
+            size_t combined_size =
+                old_size + 2*sizeof(struct Node)
+                + get_node_size(nextNodePtr)
+                + get_node_size(prevNodePtr);
+            size_t aligned_size;
+            prevNode.size = prevNode.size2 = prevNode.size3 = combined_size;
+            do {
+                *prevNodePtr = prevNode;
+            } while (!check_node(prevNodePtr, prevNode));
+            if (combined_size - new_size > sizeof(struct Node)) {
+                if (new_size %40 != 0) {
+                    aligned_size = new_size + (40 - (new_size%40));
+                } else {
+                    aligned_size = new_size;
+                }
+                // resize if enough space left over
+                resize_node(prevNodePtr, aligned_size);
+                prevNode = *prevNodePtr; // update n after resizing
+                // reset to non-aligned size
+                prevNode.size = prevNode.size2 = prevNode.size3 = new_size;
+                // update checksum so mm_read doesnt crashout
+                
+                n.checksum = get_checksum(
+                    (uint8_t*)get_node_data(nodePtr), old_size);
+                
+                
+            } else {
+                n.checksum = get_checksum(
+                    (uint8_t*)get_node_data(nodePtr), old_size);
+            }
+            do {
+                    *nodePtr = n;
+            } while (!check_node(nodePtr, n));
+            mm_read(get_node_data(nodePtr), 0,
+                    get_node_data(prevNodePtr), old_size);
+            prevNode.checksum = get_checksum(
+                    (uint8_t*)get_node_data(prevNodePtr), new_size);
+            do {
+                *prevNodePtr = prevNode;
+            } while (!check_node(prevNodePtr, prevNode));
+            printf("\nREALLOC: NODE EXPANDED INTO PREV AND NEXT");
+            return get_node_data(prevNodePtr);
+        }
+        else if (
             (get_node_state(nextNodePtr) == FREE)
             && ((old_size + sizeof(struct Node)
             + get_node_size(nextNodePtr)) >= new_size)
