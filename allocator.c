@@ -12,15 +12,9 @@
 struct Node{
     size_t size;  // size of memory block
     uint8_t state;  // free or not free
-    struct Node *prev;  // pointer to previous block
     size_t size2;  // size of memory block
-    struct Node *prev2;  // pointer to previous block
     size_t size3;  // size of memory block
-    struct Node *prev3;  // pointer to previous block
     uint16_t checksum;  // checksum
-    uint8_t* a;  // garbage for alignment purposes
-    uint16_t b;  // garbage for alignment purposes
-    uint8_t c;  // garbage for alignment purposes
 };
 
 
@@ -66,9 +60,9 @@ int check_node(struct Node* nodePtr, struct Node node) {
         (n.size != node.size)
         || (n.size2 != node.size2)
         || (n.size3 != node.size3)
-        || (n.prev != node.prev)
-        || (n.prev2 != node.prev2)
-        || (n.prev3 != node.prev3)
+        // || (n.prev != node.prev)
+        // || (n.prev2 != node.prev2)
+        // || (n.prev3 != node.prev3)
         || (n.state != node.state)
         || (n.checksum != node.checksum)
     ) {
@@ -116,124 +110,14 @@ struct Node* get_node_next(struct Node* nodePtr) {
 
 
 
-struct Node* fix_ptr(struct Node* nodePtr) {
-    printf("\nFIXING PTR");
-    // Corrupted prev ptr: try working forwards from head
-    // to get to nodePtr and repair
+struct Node* get_node_prev(struct Node* nodePtr) {
     struct Node* currentNodePtr = headPtr;
-    struct Node* prevNodePtr = NULL;
     while ((get_node_next(currentNodePtr) != nodePtr)
     && (currentNodePtr != assPtr)
     && (is_valid_pointer(currentNodePtr, 1))) {
-        prevNodePtr = currentNodePtr;
         currentNodePtr = get_node_next(currentNodePtr);
     }
-    struct Node n = *(nodePtr);
-
-    if (!is_valid_pointer(currentNodePtr, 1)) {
-        // this shouldnt ever run but its here anyway
-        struct Node newPrevNode = *(prevNodePtr);
-
-        // Look where the corrupted node should be
-        struct Node* corrputedNodePtr = (struct Node*)(
-            prevNodePtr + sizeof(struct Node) + get_node_size(prevNodePtr));
-        // check there is room to rebuild corrupted node
-
-        if ((size_t)((corrputedNodePtr) - (prevNodePtr))
-        < sizeof(struct Node)) {
-            // not enough room to rebuild corrupted node
-            // bypass corrupted area
-            n.prev = n.prev2 = n.prev3 = prevNodePtr;
-            do {
-                *(nodePtr) = n;
-            } while (!check_node(nodePtr, n));
-            do {
-                *(prevNodePtr) = newPrevNode;
-            } while (!check_node(prevNodePtr, newPrevNode));
-            return prevNodePtr;
-        }
-        // attempt to read corrupted node metadata
-        struct Node corruptedNode = *(corrputedNodePtr);
-
-        if (get_node_next(corrputedNodePtr) == nodePtr) {
-            // we know then that this is the correct node
-            n.prev = n.prev2 = n.prev3 = corrputedNodePtr;
-            do {
-                *(prevNodePtr) = newPrevNode;
-            } while (!check_node(prevNodePtr, newPrevNode));
-            do {
-                *(nodePtr) = n;
-            } while (!check_node(nodePtr, n));
-            do {
-                *(corrputedNodePtr) = corruptedNode;
-            } while (!check_node(corrputedNodePtr, corruptedNode));
-            return corrputedNodePtr;
-        } else {
-            // cannot trust corrupted node at all
-            // overwrite corrupted area with new data
-            struct Node newNode;
-            struct Node* newNodePtr = corrputedNodePtr;
-            newNode.state = FREE;
-            // calculate new node size
-            // i hate cpplint
-            newNode.size = newNode.size2 = newNode.size3 = (
-                (size_t)(
-                    (nodePtr) - (prevNodePtr + get_node_size(prevNodePtr)
-                    + 2*sizeof(struct Node))));
-            newNode.prev = newNode.prev2 = newNode.prev3 = prevNodePtr;
-            n.prev = n.prev2 = n.prev3 = newNodePtr;
-            do {
-                *(nodePtr) = n;
-            } while (!check_node(nodePtr, n));
-            do {
-                *(newNodePtr) = newNode;
-            } while (!check_node(newNodePtr, newNode));
-            do {
-                *(prevNodePtr) = newPrevNode;
-            } while (!check_node(prevNodePtr, newPrevNode));
-            return newNodePtr;
-        }
-    }
-    if (currentNodePtr == headPtr) {
-        // this would mean our current node doesnt exist
-        // return headPtr bc idk
-        printf("\nCOULD NOT FIX PTR, VERY VERY BAD");
-        n.prev = n.prev2 = n.prev3 = headPtr;
-        do {
-            *(nodePtr) = n;
-        } while (!check_node(nodePtr, n));
-        return headPtr;
-    } else {
-        // we found the correct node by working forwards
-        // fix broken pointer
-        n.prev = n.prev2 = n.prev3 = currentNodePtr;
-        do {
-            *(nodePtr) = n;
-        } while (!check_node(nodePtr, n));
-        return currentNodePtr;
-    }
-}
-
-
-
-
-struct Node* get_node_prev(struct Node* nodePtr) {
-    struct Node n = *(nodePtr);
-    uintptr_t prev1 = (uintptr_t) n.prev;
-    uintptr_t prev2 = (uintptr_t) n.prev2;
-    uintptr_t prev3 = (uintptr_t) n.prev3;
-
-    uintptr_t correctPrev = (prev1 & prev2) | (prev1 & prev3) | (prev2 & prev3);
-    if (is_valid_pointer((void*)correctPrev, 1) || (void*)correctPrev == NULL) {
-        n.prev = n.prev2 = n.prev3 = (struct Node*) correctPrev;
-        do {
-            *(nodePtr) = n;
-        } while (!check_node(nodePtr, n));
-
-    } else {
-        return fix_ptr(nodePtr);
-    }
-    return (struct Node*) correctPrev;
+    return currentNodePtr;
 }
 
 
@@ -284,11 +168,11 @@ int mm_init(uint8_t *heap, size_t heap_size) {
     struct Node head;
     head.size = head.size2 = head.size3 = 0;
     head.state = UNFREE;
-    head.prev = head.prev2 = head.prev3 = NULL;
+    // head.prev = head.prev2 = head.prev3 = NULL;
     struct Node ass;
     ass.size = ass.size2 = ass.size3 = 0;
     ass.state = UNFREE;
-    ass.prev = ass.prev2 = ass.prev3 = NULL;
+    // ass.prev = ass.prev2 = ass.prev3 = NULL;
 
     if (heap_size < (3*sizeof(struct Node))) {
         // not enough heap space to do anything
@@ -310,7 +194,7 @@ int mm_init(uint8_t *heap, size_t heap_size) {
 
     // initialise initial data node
     struct Node heapNode = {
-        (heap_size - 3*sizeof(struct Node)), FREE, NULL
+        (heap_size - 3*sizeof(struct Node)), FREE
     };
     heapPtr = heap;
     heapNode.size = heapNode.size2 = heapNode.size3 = (
@@ -331,8 +215,8 @@ int mm_init(uint8_t *heap, size_t heap_size) {
         (uint8_t *)heap + sizeof(head));
 
     // set the prev pointers for each node
-    ass.prev = ass.prev2 = ass.prev3 = heapContentsPtr;
-    heapNode.prev = heapNode.prev2 = heapNode.prev3 = heapHeadPtr;
+    // ass.prev = ass.prev2 = ass.prev3 = heapContentsPtr;
+    // heapNode.prev = heapNode.prev2 = heapNode.prev3 = heapHeadPtr;
 
     // write nodes to the heap
     do {
@@ -383,8 +267,8 @@ void resize_node(struct Node* nodePtr, size_t size) {
 
     struct Node nextNode = *nextNodePtr;
     // update prev pointers
-    newNode.prev = newNode.prev2 = newNode.prev3 = nodePtr;
-    nextNode.prev = nextNode.prev2 = nextNode.prev3 = newNodePtr;
+    // newNode.prev = newNode.prev2 = newNode.prev3 = nodePtr;
+    // nextNode.prev = nextNode.prev2 = nextNode.prev3 = newNodePtr;
     // write to heap
     do {
         *nodePtr = n;
@@ -603,7 +487,7 @@ void delete_node(struct Node* nodePtr) {
     struct Node prevNode = *prevNodePtr;
 
     // update pointers to bypass deleted node.
-    nextNode.prev = nextNode.prev2 = nextNode.prev3 = prevNodePtr;
+    // nextNode.prev = nextNode.prev2 = nextNode.prev3 = prevNodePtr;
     // write to heap
     do {
         *prevNodePtr = prevNode;
@@ -659,8 +543,8 @@ void merge_node(struct Node* nodePtr) {
             - (uint8_t*)get_node_data(prevNodePtr));
         printf("\nB1: NEW SIZE AFTER MERGE: %zu", newSize);
         // "delete" redundant nodes (just update prev ptrs)
-        delete_node(currentNodePtr);
-        delete_node(nextNodePtr);
+        //delete_node(currentNodePtr);
+        //delete_node(nextNodePtr);
         prevNode = *prevNodePtr;
         // update size
         prevNode.size = prevNode.size2 = prevNode.size3 = newSize;
@@ -678,7 +562,7 @@ void merge_node(struct Node* nodePtr) {
             - (uint8_t*)get_node_data(prevNodePtr));
 
         // "delete" redundant node (just update prev and next ptrs)
-        delete_node(currentNodePtr);
+        //delete_node(currentNodePtr);
         // update the prev and next ptrs from delete_node()
         prevNode = *prevNodePtr;
         // update size
@@ -694,7 +578,7 @@ void merge_node(struct Node* nodePtr) {
             (uint8_t*)get_node_next(nextNodePtr)
             - (uint8_t*)get_node_data(currentNodePtr));
 
-        delete_node(nextNodePtr);
+        //delete_node(nextNodePtr);
         currentNode = *currentNodePtr;
         currentNode.size = currentNode.size2 = currentNode.size3 = newSize;
         do {
