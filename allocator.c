@@ -26,7 +26,6 @@ static uint8_t pattern[5];
 
 
 
-
 int is_valid_pointer(void* ptr, int sentinels_valid) {
     if (sentinels_valid) {
         if (((uint8_t*)ptr) < (heapPtr)
@@ -60,9 +59,6 @@ int check_node(struct Node* nodePtr, struct Node node) {
         (n.size != node.size)
         || (n.size2 != node.size2)
         || (n.size3 != node.size3)
-        // || (n.prev != node.prev)
-        // || (n.prev2 != node.prev2)
-        // || (n.prev3 != node.prev3)
         || (n.state != node.state)
         || (n.checksum != node.checksum)
     ) {
@@ -168,11 +164,9 @@ int mm_init(uint8_t *heap, size_t heap_size) {
     struct Node head;
     head.size = head.size2 = head.size3 = 0;
     head.state = UNFREE;
-    // head.prev = head.prev2 = head.prev3 = NULL;
     struct Node ass;
     ass.size = ass.size2 = ass.size3 = 0;
     ass.state = UNFREE;
-    // ass.prev = ass.prev2 = ass.prev3 = NULL;
 
     if (heap_size < (3*sizeof(struct Node))) {
         // not enough heap space to do anything
@@ -201,7 +195,6 @@ int mm_init(uint8_t *heap, size_t heap_size) {
         heap_size - 3*sizeof(struct Node));
 
     heapNode.checksum = 0;
-    // Initialise pointers to nodes on the heap
 
     // put the head at the start of the heap
     struct Node *heapHeadPtr = (struct Node *) heap;
@@ -214,9 +207,6 @@ int mm_init(uint8_t *heap, size_t heap_size) {
     struct Node *heapContentsPtr = (struct Node *)(
         (uint8_t *)heap + sizeof(head));
 
-    // set the prev pointers for each node
-    // ass.prev = ass.prev2 = ass.prev3 = heapContentsPtr;
-    // heapNode.prev = heapNode.prev2 = heapNode.prev3 = heapHeadPtr;
 
     // write nodes to the heap
     do {
@@ -262,23 +252,12 @@ void resize_node(struct Node* nodePtr, size_t size) {
     struct Node* newNodePtr = (struct Node*)(
         (uint8_t*)nodePtr + size + sizeof(struct Node));
 
-    // get next node
-    struct Node* nextNodePtr = (struct Node *) get_node_next(nodePtr);
-
-    struct Node nextNode = *nextNodePtr;
-    // update prev pointers
-    // newNode.prev = newNode.prev2 = newNode.prev3 = nodePtr;
-    // nextNode.prev = nextNode.prev2 = nextNode.prev3 = newNodePtr;
-    // write to heap
     do {
         *nodePtr = n;
     } while (!check_node(nodePtr, n));
     do {
         *newNodePtr = newNode;
     } while (!check_node(newNodePtr, newNode));
-    do {
-        *nextNodePtr = nextNode;
-    } while (!check_node(nextNodePtr, nextNode));
     return;
 }
 
@@ -330,7 +309,7 @@ void *mm_malloc(size_t size) {
             // reset the size to the requested size to ensure API conformity
             currentNode.size = currentNode.size2 = currentNode.size3 = size;
 
-            memset(get_node_data(currentNodePtr), 0, currentNode.size);
+            // memset(get_node_data(currentNodePtr), 0, currentNode.size);
             found = 1;
             currentNode.checksum = 0;
             do {
@@ -471,36 +450,6 @@ int mm_write(void *ptr, size_t offset, const void *src, size_t len) {
 
 
 
-// updates the pointers of previous and next nodes to "delete" the node.
-void delete_node(struct Node* nodePtr) {
-    struct Node* currentNodePtr = nodePtr;
-    struct Node currentNode = *nodePtr;
-    // dont delete non-free nodes
-    if (get_node_state(currentNodePtr) != FREE) {
-        printf("\nCANNOT DELETE NON-FREE NODE");
-        return;
-    }
-    // get prev and next nodes
-    struct Node* nextNodePtr = get_node_next(currentNodePtr);
-    struct Node nextNode = *nextNodePtr;
-    struct Node* prevNodePtr = get_node_prev(currentNodePtr);
-    struct Node prevNode = *prevNodePtr;
-
-    // update pointers to bypass deleted node.
-    // nextNode.prev = nextNode.prev2 = nextNode.prev3 = prevNodePtr;
-    // write to heap
-    do {
-        *prevNodePtr = prevNode;
-    } while (!check_node(prevNodePtr, prevNode));
-    do {
-        *nextNodePtr = nextNode;
-    } while (!check_node(nextNodePtr, nextNode));
-    return;
-}
-
-
-
-
 // overwrite a node's data with the 5 byte pattern
 void overwrite_data(uint8_t* dataPtr, size_t size) {
     // to ensure pattern is properly aligned
@@ -527,6 +476,7 @@ void merge_node(struct Node* nodePtr) {
     struct Node nextNode = *nextNodePtr;
     struct Node* prevNodePtr = get_node_prev(currentNodePtr);
     struct Node prevNode = *prevNodePtr;
+    // previous and next nodes free -> merge all 3 into previous
     if (
         (get_node_state(prevNodePtr) == FREE)
         && (get_node_state(nextNodePtr) == FREE)
@@ -541,10 +491,7 @@ void merge_node(struct Node* nodePtr) {
         size_t newSize = (size_t)(
             (uint8_t*)get_node_next(nextNodePtr)
             - (uint8_t*)get_node_data(prevNodePtr));
-        printf("\nB1: NEW SIZE AFTER MERGE: %zu", newSize);
-        // "delete" redundant nodes (just update prev ptrs)
-        //delete_node(currentNodePtr);
-        //delete_node(nextNodePtr);
+        // update node
         prevNode = *prevNodePtr;
         // update size
         prevNode.size = prevNode.size2 = prevNode.size3 = newSize;
@@ -554,16 +501,13 @@ void merge_node(struct Node* nodePtr) {
         } while (!check_node(prevNodePtr, prevNode));
         // fill with 5B pattern
         overwrite_data(get_node_data(prevNodePtr), newSize);
-
+    // only previous node free -> merge both into previous
     } else if (get_node_state(prevNodePtr) == FREE) {
         // get new size of merged node
         size_t newSize = (size_t)(
             (uint8_t*)get_node_next(currentNodePtr)
             - (uint8_t*)get_node_data(prevNodePtr));
 
-        // "delete" redundant node (just update prev and next ptrs)
-        //delete_node(currentNodePtr);
-        // update the prev and next ptrs from delete_node()
         prevNode = *prevNodePtr;
         // update size
         prevNode.size = prevNode.size2 = prevNode.size3 = newSize;
@@ -573,18 +517,20 @@ void merge_node(struct Node* nodePtr) {
         } while (!check_node(prevNodePtr, prevNode));
         // fill with 5B pattern
         overwrite_data(get_node_data(prevNodePtr), newSize);
+    // only next node free -> merge both into current
     } else if (get_node_state(nextNodePtr) == FREE) {
         size_t newSize = (size_t)(
             (uint8_t*)get_node_next(nextNodePtr)
             - (uint8_t*)get_node_data(currentNodePtr));
 
-        //delete_node(nextNodePtr);
         currentNode = *currentNodePtr;
         currentNode.size = currentNode.size2 = currentNode.size3 = newSize;
         do {
             *currentNodePtr = currentNode;
         } while (!check_node(currentNodePtr, currentNode));
+        // fill with 5B pattern
         overwrite_data(get_node_data(currentNodePtr), newSize);
+    // neither adjacent node free -> just overwrite current with 5B pattern
     } else {
         // if no merging to be done, just overwrite with 5B pattern
         overwrite_data(
@@ -638,6 +584,7 @@ void mm_free(void *ptr) {
     size_t size = n.size;
     // free node BEFORE calling merge_node() - IMPORTANT
     n.state = FREE;
+    // write to heap
     do {
         *nodePtr = n;
     } while (!check_node(nodePtr, n));
