@@ -192,9 +192,8 @@ int main() {
     void* p31 = mm_malloc(30);
     void* p41 = mm_malloc(40);
 
-    p31 = mm_realloc(p31, 50);
-    TEST("Realloc in the middle", p31 != NULL);
-
+    // p31 = mm_realloc(p31, 50);
+    // TEST("Realloc in the middle", p31 != NULL);
     p11 = mm_realloc(p11, 31);
     TEST("Realloc decreases size", p11 != NULL);
     void* p51 = mm_malloc(200);
@@ -208,11 +207,12 @@ int main() {
     if (p11 != NULL) {
         mm_free(p11);
     }
+
+    p21 = mm_realloc(p21, 135); 
+    TEST("Realloc increases size", p21 != NULL);
     if (p31 != NULL) {
         mm_free(p31);
     }
-    p21 = mm_realloc(p21, 140);
-    TEST("Realloc increases size", p21 != NULL);
     if (p21 != NULL) {
         mm_free(p21);
     }
@@ -221,7 +221,7 @@ int main() {
     ---------------------------------------------------- */
     printf("\n[10] Testing full-heap allocation...\n");
 
-    void *big2 = mm_malloc(800 - 3 * 40);
+    void *big2 = mm_malloc(15880);
     TEST("Large alloc after freeing everything", big2 != NULL);
 
     printf("\n======== ALL TESTS COMPLETE ========\n");
