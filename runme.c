@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <string.h>
 #include "./allocator.h"
-// Helper for printing PASS/FAIL
+// ChatGPT-written helper for printing PASS/FAIL
 #define TEST(name, expr) do { \
     printf("\nTEST %-40s : ", name); \
     if (expr) printf("PASS\n"); \
@@ -82,7 +82,9 @@ int main() {
     mm_free(ptr4);
     mm_free((void*)2);
 
+    // ChatGPT-written Tests
     printf("\n[2] Testing basic allocation...\n");
+
 
     void *a = mm_malloc(32);
     TEST("mm_malloc(32) != NULL", a != NULL);
