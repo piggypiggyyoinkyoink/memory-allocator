@@ -192,8 +192,8 @@ int main() {
     void* p31 = mm_malloc(30);
     void* p41 = mm_malloc(40);
 
-    // p31 = mm_realloc(p31, 50);
-    // TEST("Realloc in the middle", p31 != NULL);
+    p31 = mm_realloc(p31, 50);
+    TEST("Realloc in the middle", p31 != NULL);
     p11 = mm_realloc(p11, 31);
     TEST("Realloc decreases size", p11 != NULL);
     void* p51 = mm_malloc(200);
@@ -208,7 +208,7 @@ int main() {
         mm_free(p11);
     }
 
-    p21 = mm_realloc(p21, 135); 
+    p21 = mm_realloc(p21, 230); 
     TEST("Realloc increases size", p21 != NULL);
     if (p31 != NULL) {
         mm_free(p31);

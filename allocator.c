@@ -688,11 +688,15 @@ void *mm_realloc(void *ptr, size_t new_size) {
             && ((old_size + 2* sizeof(struct Node) + get_node_size(nextNodePtr)
             + get_node_size(prevNodePtr)) >= new_size)
         ) {
-            // UNFREE the prev node so the below malloc doesnt create issues
+            // unfree prev and next nodes so the malloc doesnt create issues
             prevNode.state = UNFREE;
+            nextNode.state = UNFREE;
             do {
                 *prevNodePtr = prevNode;
             } while (!check_node(prevNodePtr, prevNode));
+            do {
+                *nextNodePtr = nextNode;
+            } while (!check_node(nextNodePtr, nextNode));
             // get old data before overwritingness
             void* oldDataPtr = get_node_data(nodePtr);
             void* tmpDataStorage = mm_malloc(old_size);
