@@ -700,6 +700,15 @@ void *mm_realloc(void *ptr, size_t new_size) {
             void* tmpDataStorage = mm_malloc(old_size);
             if (tmpDataStorage == NULL) {
                 // allocation failed
+                // re-free-ify prev and next nodes
+                prevNode.state = FREE;
+                nextNode.state = FREE;
+                do {
+                    *prevNodePtr = prevNode;
+                } while (!check_node(prevNodePtr, prevNode));
+                do {
+                    *nextNodePtr = nextNode;
+                } while (!check_node(nextNodePtr, nextNode));
                 return NULL;
             }
             // save data to temp storage
@@ -793,6 +802,11 @@ void *mm_realloc(void *ptr, size_t new_size) {
             void* tmpDataStorage = mm_malloc(old_size);
             if (tmpDataStorage == NULL) {
                 // allocation failed
+                // re-free-ify prev node
+                prevNode.state = FREE;
+                do {
+                    *prevNodePtr = prevNode;
+                } while (!check_node(prevNodePtr, prevNode));
                 return NULL;
             }
 
