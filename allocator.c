@@ -629,6 +629,11 @@ void *mm_realloc(void *ptr, size_t new_size) {
     struct Node* nodePtr = ptr;
     struct Node n = *nodePtr;
     size_t old_size = get_node_size(nodePtr);
+    if (get_node_state(nodePtr) != UNFREE) {
+        // cannot realloc a free block
+        printf("\nCANNOT REALLOC A FREE BLOCK");
+        return NULL;
+    }
 
     if (old_size == new_size) {
         // no resizing needed
@@ -672,7 +677,7 @@ void *mm_realloc(void *ptr, size_t new_size) {
         struct Node nextNode = *nextNodePtr;
         struct Node* prevNodePtr = get_node_prev(nodePtr);
         struct Node prevNode = *prevNodePtr;
-        // check if next node is free and has enough space
+        // check if prev and next nodes are free and have enough space
         if (
             (get_node_state(prevNodePtr) == FREE)
             && (get_node_state(nextNodePtr) == FREE)
@@ -719,6 +724,7 @@ void *mm_realloc(void *ptr, size_t new_size) {
             } while (!check_node(prevNodePtr, prevNode));
             printf("\nREALLOC: NODE EXPANDED INTO PREV AND NEXT");
             return get_node_data(prevNodePtr);
+        // check if next node is free and has enough space
         } else if (
             (get_node_state(nextNodePtr) == FREE)
             && ((old_size + sizeof(struct Node)
