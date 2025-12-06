@@ -388,7 +388,7 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len) {
     int numBytes = 0;
     // apply offset
     dataPtr += offset;
-    
+
     // read data 1 byte at a time
     for (size_t i = 0; i < len; i++) {
         do {
@@ -429,10 +429,9 @@ int mm_write(void *ptr, size_t offset, const void *src, size_t len) {
         printf("\nBLOCK TOO SMALL");
         return -1;
     }
-    
 
     int numBytes = 0;
-    
+
     // apply offset
     dataPtr += offset;
     // write data 1 byte at a time
@@ -575,7 +574,7 @@ void mm_free(void *ptr) {
 
     printf("\n%p", get_node_prev(nodePtr));
     printf("\n%p", get_node_next(nodePtr));
-    
+
     // return if prev or next pointers are invalid
     if (
         !is_valid_pointer(get_node_prev(nodePtr), 1)
