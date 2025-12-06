@@ -118,8 +118,6 @@ struct Node* get_node_prev(struct Node* nodePtr) {
     && (currentNodePtr != endPtr)
     && (is_valid_pointer(currentNodePtr, 1))) {
         currentNodePtr = get_node_next(currentNodePtr);
-        //printf("\nHELLO\n");
-
     }
     return currentNodePtr;
 }
@@ -573,7 +571,7 @@ void mm_free(void *ptr) {
 
     // Get the node
     struct Node* nodePtr = ptr;
-    
+
     printf("\n%p", get_node_prev(nodePtr));
     printf("\n%p", get_node_next(nodePtr));
 
@@ -727,7 +725,7 @@ void *mm_realloc(void *ptr, size_t new_size) {
                 prevNode = *prevNodePtr;  // update n after resizing
                 // reset to non-aligned size
                 prevNode.size = prevNode.size2 = prevNode.size3 = new_size;
-            } 
+            }
             prevNode.state = UNFREE;
             do {
                 *prevNodePtr = prevNode;
@@ -797,7 +795,7 @@ void *mm_realloc(void *ptr, size_t new_size) {
                 // allocation failed
                 return NULL;
             }
-            
+
             // save data to temp storage
             mm_write(tmpDataStorage, 0, oldDataPtr, old_size);
             // merge current, prev and next nodes into one supernode :)
@@ -809,7 +807,7 @@ void *mm_realloc(void *ptr, size_t new_size) {
             do {
                 *prevNodePtr = prevNode;
             } while (!check_node(prevNodePtr, prevNode));
-            
+
             if (new_size %40 != 0) {
                 aligned_size = new_size + (40 - (new_size%40));
             } else {
@@ -823,7 +821,7 @@ void *mm_realloc(void *ptr, size_t new_size) {
                 prevNode = *prevNodePtr;  // update n after resizing
                 // reset to non-aligned size
                 prevNode.size = prevNode.size2 = prevNode.size3 = new_size;
-            } 
+            }
             prevNode.state = UNFREE;
             do {
                 *prevNodePtr = prevNode;
