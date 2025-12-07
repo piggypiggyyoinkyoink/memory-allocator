@@ -208,7 +208,7 @@ int main() {
         mm_free(p11);
     }
 
-    p21 = mm_realloc(p21, 230);
+    p21 = mm_realloc(p21, 80);
     TEST("Realloc increases size", p21 != NULL);
     if (p31 != NULL) {
         mm_free(p31);
