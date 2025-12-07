@@ -582,7 +582,7 @@ int mm_write(void *ptr, size_t offset, const void *src, size_t len) {
     }
 
     // update checksum
-    uint16_t checksum = get_checksum((uint8_t*)src, size);
+    uint16_t checksum = get_checksum((uint8_t*)dataPtr, size);
     n.checksum = checksum;
 
     // write to heap
