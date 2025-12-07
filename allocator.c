@@ -10,17 +10,14 @@
 #define UNFREE 255
 
 struct Node{
-    size_t size;  // size of memory block
+    uint32_t size;  // size of memory block
+    uint32_t size2;  // size of memory block
+    uint32_t size3;  // size of memory block
     uint8_t state;  // free or not free
-    struct Node *prev;  // pointer to previous block
-    size_t size2;  // size of memory block
-    struct Node *prev2;  // pointer to previous block
-    size_t size3;  // size of memory block
-    struct Node *prev3;  // pointer to previous block
     uint16_t checksum;  // checksum
-    uint8_t* a;  // garbage for alignment purposes
-    uint16_t b;  // garbage for alignment purposes
-    uint8_t c;  // garbage for alignment purposes
+    struct Node *prev;  // pointer to previous block
+    struct Node *prev2;  // pointer to previous block
+    struct Node *prev3;  // pointer to previous block
 };
 
 
@@ -309,10 +306,9 @@ int mm_init(uint8_t *heap, size_t heap_size) {
     heapSize = heap_size;
 
     // initialise initial data node
-    struct Node heapNode = {
-        (heap_size - 3*sizeof(struct Node)), FREE, NULL
-    };
+    struct Node heapNode;
     heapPtr = heap;
+    heapNode.state = FREE;
     heapNode.size = heapNode.size2 = heapNode.size3 = (
         heap_size - 3*sizeof(struct Node));
 
@@ -562,6 +558,7 @@ int mm_write(void *ptr, size_t offset, const void *src, size_t len) {
         printf("\nBLOCK TOO SMALL");
         return -1;
     }
+    //memset(dataPtr, 0, size);
 
     // write data 1 byte at a time
     int numBytes = 0;
@@ -575,12 +572,18 @@ int mm_write(void *ptr, size_t offset, const void *src, size_t len) {
         } while ( *(dataPtr+i) != *(source+i) );
         numBytes++;
     }
-
+    
     uint16_t checksum = get_checksum((uint8_t*)src, len);
     n.checksum = checksum;
     do {
         *nodePtr = n;
     } while (!check_node(nodePtr, n));
+    // if partial write occurs
+    if (len < (size-offset)) {
+        printf("\nPARTIAL WRITE OCCURRED");
+        // pad remaining bytes with zeros
+        memset(dataPtr + numBytes, 0, size - (offset + numBytes + 1));
+    }
     return numBytes;
 }
 
@@ -763,4 +766,274 @@ void mm_free(void *ptr) {
 
     printf("\nSUCCESSFULLY FREED BLOCK OF SIZE %zu", size);
     return;
+}
+
+// Resize a previously allocated block to new_size bytes,
+// preserving data. [See additional credit]
+void *mm_realloc(void *ptr, size_t new_size) {
+    printf("\nREALLOCATING BLOCK TO SIZE %zu", new_size);
+    new_size = (uint32_t)new_size;
+
+    // check for null or invalid pointer
+    if (ptr == NULL || !is_valid_pointer(ptr, 0)) {
+        printf("\nINVALID POINTER IN MM_REALLOC");
+        return NULL;
+    }
+
+    // check for size 0
+    if (new_size == 0) {
+        printf("\nCANNOT REALLOC TO SIZE 0");
+        return NULL;
+    }
+
+    ptr = (void*)((uint8_t*)ptr - sizeof(struct Node));  // data ptr to node ptr
+
+    struct Node* nodePtr = ptr;
+    struct Node n = *nodePtr;
+    uint32_t old_size = get_node_size(nodePtr);
+    if (get_node_state(nodePtr) != UNFREE) {
+        // cannot realloc a free block
+        printf("\nCANNOT REALLOC A FREE BLOCK");
+        return NULL;
+    }
+
+    if (old_size == new_size) {
+        // no resizing needed
+        printf("\nREALLOC: NODE UNCHANGED");
+        return get_node_data(nodePtr);
+    } else if (new_size < old_size) {
+        // node needs shrinking
+        if (
+            (old_size - new_size)
+            > sizeof(struct Node)
+        ) {
+            // resize node to smaller size if sufficient space
+            uint32_t aligned_size;
+            if (new_size %40 != 0) {
+                aligned_size = new_size + (40 - (new_size%40));
+            } else {
+                aligned_size = new_size;
+            }
+            // use aligned size to conform to 40 byte alignment
+            resize_node(nodePtr, aligned_size);
+            n = *nodePtr;  // update n after resizing
+            // reset to non-aligned size
+            n.size = n.size2 = n.size3 = new_size;
+            n.checksum = get_checksum(
+                (uint8_t*)get_node_data(nodePtr), new_size);
+            // rewrite to heap
+            do {
+                *nodePtr = n;
+            } while (!check_node(nodePtr, n));
+            printf("\nREALLOC: NODE SHRUNK");
+            return get_node_data(nodePtr);
+
+        } else {
+            // not enough room to create a new node, leave node unchanged
+            printf("\nREALLOC: NODE UNCHANGED");
+            return get_node_data(nodePtr);
+        }
+    } else {
+        // node needs expanding
+        struct Node* nextNodePtr = get_node_next(nodePtr);
+        struct Node nextNode = *nextNodePtr;
+        struct Node* prevNodePtr = get_node_prev(nodePtr);
+        struct Node prevNode = *prevNodePtr;
+        // check if prev and next nodes are free and have enough space
+        if (
+            (get_node_state(prevNodePtr) == FREE)
+            && (get_node_state(nextNodePtr) == FREE)
+            && ((old_size + 2* sizeof(struct Node) + get_node_size(nextNodePtr)
+            + get_node_size(prevNodePtr)) >= new_size)
+        ) {
+            // unfree prev and next nodes so the malloc doesnt create issues
+            prevNode.state = UNFREE;
+            nextNode.state = UNFREE;
+            do {
+                *prevNodePtr = prevNode;
+            } while (!check_node(prevNodePtr, prevNode));
+            do {
+                *nextNodePtr = nextNode;
+            } while (!check_node(nextNodePtr, nextNode));
+            // get old data before overwritingness
+            void* oldDataPtr = get_node_data(nodePtr);
+            void* tmpDataStorage = mm_malloc(old_size);
+            if (tmpDataStorage == NULL) {
+                // allocation failed
+                // re-free-ify prev and next nodes
+                prevNode.state = FREE;
+                nextNode.state = FREE;
+                do {
+                    *prevNodePtr = prevNode;
+                } while (!check_node(prevNodePtr, prevNode));
+                do {
+                    *nextNodePtr = nextNode;
+                } while (!check_node(nextNodePtr, nextNode));
+                return NULL;
+            }
+            // save data to temp storage
+            mm_write(tmpDataStorage, 0, oldDataPtr, old_size);
+            // merge current, prev and next nodes into one supernode :)
+            uint32_t combined_size =
+                old_size + 2*sizeof(struct Node)
+                + get_node_size(nextNodePtr)
+                + get_node_size(prevNodePtr);
+            uint32_t aligned_size;
+            prevNode.size = prevNode.size2 = prevNode.size3 = combined_size;
+            do {
+                *prevNodePtr = prevNode;
+            } while (!check_node(prevNodePtr, prevNode));
+            if (new_size %40 != 0) {
+                aligned_size = new_size + (40 - (new_size%40));
+            } else {
+                aligned_size = new_size;
+            }
+            if (combined_size - aligned_size > sizeof(struct Node)) {
+                // resize if enough space left over
+                resize_node(prevNodePtr, aligned_size);
+                prevNode = *prevNodePtr;  // update n after resizing
+                // reset to non-aligned size
+                prevNode.size = prevNode.size2 = prevNode.size3 = new_size;
+            }
+            prevNode.state = UNFREE;
+            do {
+                *prevNodePtr = prevNode;
+            } while (!check_node(prevNodePtr, prevNode));
+            // copy data back to reallocated block
+            mm_write(get_node_data(prevNodePtr), 0,
+                    tmpDataStorage, old_size);
+            mm_free(tmpDataStorage);
+            printf("\nREALLOC: NODE EXPANDED INTO PREV AND NEXT");
+            return get_node_data(prevNodePtr);
+        // check if next node is free and has enough space
+        } else if (
+            (get_node_state(nextNodePtr) == FREE)
+            && ((old_size + sizeof(struct Node)
+            + get_node_size(nextNodePtr)) >= new_size)
+        ) {
+            // merge with next node
+            uint32_t combined_size =
+                old_size + sizeof(struct Node) + get_node_size(nextNodePtr);
+            uint32_t aligned_size;
+            n.size = n.size2 = n.size3 = combined_size;
+            do {
+                *nodePtr = n;
+            } while (!check_node(nodePtr, n));
+            if (combined_size - new_size > sizeof(struct Node)) {
+                if (new_size %40 != 0) {
+                    aligned_size = new_size + (40 - (new_size%40));
+                } else {
+                    aligned_size = new_size;
+                }
+                // resize if enough space left over
+                resize_node(nodePtr, aligned_size);
+                n = *nodePtr;  // update n after resizing
+                // reset to non-aligned size
+                n.size = n.size2 = n.size3 = new_size;
+                n.state = UNFREE;
+                // update checksum so mm_read doesnt crashout
+                n.checksum = get_checksum(
+                    (uint8_t*)get_node_data(nodePtr), new_size);
+
+            } else {
+                n.checksum = get_checksum(
+                    (uint8_t*)get_node_data(nodePtr), combined_size);
+            }
+            // rewrite to heap
+            do {
+                *nodePtr = n;
+            } while (!check_node(nodePtr, n));
+            printf("\nREALLOC: NODE EXPANDED INTO NEXT");
+            // return pointer
+            return get_node_data(nodePtr);
+        // check if prev node is free and has enough space
+        } else if (
+            (get_node_state(prevNodePtr) == FREE)
+            && ((old_size + sizeof(struct Node)
+            + get_node_size(prevNodePtr)) >= new_size)
+        ) {
+            // UNFREE the prev node so the below malloc doesnt create issues
+            prevNode.state = UNFREE;
+            do {
+                *prevNodePtr = prevNode;
+            } while (!check_node(prevNodePtr, prevNode));
+            // get old data before overwritingness
+            void* oldDataPtr = get_node_data(nodePtr);
+            void* tmpDataStorage = mm_malloc(old_size);
+            if (tmpDataStorage == NULL) {
+                // allocation failed
+                // re-free-ify prev node
+                prevNode.state = FREE;
+                do {
+                    *prevNodePtr = prevNode;
+                } while (!check_node(prevNodePtr, prevNode));
+                return NULL;
+            }
+
+            // save data to temp storage
+            mm_write(tmpDataStorage, 0, oldDataPtr, old_size);
+            // merge current, prev and next nodes into one supernode :)
+            uint32_t combined_size =
+                old_size + sizeof(struct Node)
+                + get_node_size(prevNodePtr);
+            uint32_t aligned_size;
+            prevNode.size = prevNode.size2 = prevNode.size3 = combined_size;
+            do {
+                *prevNodePtr = prevNode;
+            } while (!check_node(prevNodePtr, prevNode));
+
+            if (new_size %40 != 0) {
+                aligned_size = new_size + (40 - (new_size%40));
+            } else {
+                aligned_size = new_size;
+            }
+            if ((combined_size - aligned_size) > sizeof(struct Node)) {
+                printf("\nALIGNED SIZE: %zu", (size_t)aligned_size);
+                // resize if enough space left over
+                resize_node(prevNodePtr, aligned_size);
+
+                prevNode = *prevNodePtr;  // update n after resizing
+                // reset to non-aligned size
+                prevNode.size = prevNode.size2 = prevNode.size3 = new_size;
+            }
+            prevNode.state = UNFREE;
+            do {
+                *prevNodePtr = prevNode;
+            } while (!check_node(prevNodePtr, prevNode));
+            // copy data back to reallocated block
+            mm_write(get_node_data(prevNodePtr), 0,
+                    tmpDataStorage, old_size);
+            mm_free(tmpDataStorage);
+            printf("\nREALLOC: NODE EXPANDED INTO PREV");
+            // return new pointer
+            return get_node_data(prevNodePtr);
+        // unable to expand into adjacent nodes
+        } else {
+            // look elsewhere
+            void* newPtr = mm_malloc(new_size);
+            struct Node* newNodePtr = (struct Node*)(
+                (uint8_t*)newPtr - sizeof(struct Node));
+            struct Node newNode = *newNodePtr;
+            if (newPtr == NULL) {
+                // allocation failed
+                return NULL;
+            } else {
+                // copy data to new block
+                mm_write(newPtr, 0,
+                    get_node_data(nodePtr), old_size);
+
+                // free old block
+                mm_free(get_node_data(nodePtr));
+                newNode.state = UNFREE;
+                // update checksum of new block
+                newNode.checksum = get_checksum(
+                    (uint8_t*)newPtr, new_size);
+                do {
+                    *newNodePtr = newNode;
+                } while (!check_node(newNodePtr, newNode));
+                printf("\nREALLOC: NEW BLOCK ALLOCATED");
+                return newPtr;
+            }
+        }
+    }
 }

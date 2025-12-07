@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <string.h>
 #include "./allocator.h"
-// Helper for printing PASS/FAIL
+// ChatGPT-written helper for printing PASS/FAIL
 #define TEST(name, expr) do { \
     printf("\nTEST %-40s : ", name); \
     if (expr) printf("PASS\n"); \
@@ -82,7 +82,9 @@ int main() {
     mm_free(ptr4);
     mm_free((void*)2);
 
+    // ChatGPT-written Tests
     printf("\n[2] Testing basic allocation...\n");
+
 
     void *a = mm_malloc(32);
     TEST("mm_malloc(32) != NULL", a != NULL);
@@ -94,7 +96,7 @@ int main() {
 
     char msg[] = "Hello world!";
     int numB1 = mm_write(a, 5, msg, sizeof(msg));
-
+    a = mm_realloc(a, 64);
     char bufff[32];
     memset(bufff, 0, sizeof(bufff));
     int numB2 = mm_read(a, 5, bufff, sizeof(msg));
@@ -110,7 +112,6 @@ int main() {
 
     void *b = mm_malloc(64);
     void *c = mm_malloc(128);
-
     TEST("Second alloc != NULL", b != NULL);
     TEST("Third alloc != NULL", c != NULL);
 
@@ -184,13 +185,43 @@ int main() {
     mm_read(NULL, 0, rbuff, 16);            // should do nothing
 
     TEST("NULL operations do not crash", 1);
+    // realloc tests
 
+    void* p11 = mm_malloc(100);
+    void* p21 = mm_malloc(20);
+    void* p31 = mm_malloc(30);
+    void* p41 = mm_malloc(40);
+
+    p31 = mm_realloc(p31, 50);
+    TEST("Realloc in the middle", p31 != NULL);
+    p11 = mm_realloc(p11, 31);
+    TEST("Realloc decreases size", p11 != NULL);
+    void* p51 = mm_malloc(200);
+
+    if (p51 != NULL) {
+        mm_free(p51);
+    }
+    if (p41 != NULL) {
+        mm_free(p41);
+    }
+    if (p11 != NULL) {
+        mm_free(p11);
+    }
+
+    p21 = mm_realloc(p21, 80);
+    TEST("Realloc increases size", p21 != NULL);
+    if (p31 != NULL) {
+        mm_free(p31);
+    }
+    if (p21 != NULL) {
+        mm_free(p21);
+    }
     /* ----------------------------------------------------
         TEST 9: Allocate entire heap
     ---------------------------------------------------- */
     printf("\n[10] Testing full-heap allocation...\n");
 
-    void *big2 = mm_malloc(800 - 3 * 40);
+    void *big2 = mm_malloc(15880);
     TEST("Large alloc after freeing everything", big2 != NULL);
 
     printf("\n======== ALL TESTS COMPLETE ========\n");
