@@ -582,7 +582,7 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len) {
         printf("READ GOES OUT OF BOUNDS");
         return -1;
     }
-    
+
     int numBytes = 0;
     // apply offset
     dataPtr += offset;
@@ -631,7 +631,7 @@ int mm_write(void *ptr, size_t offset, const void *src, size_t len) {
     }
 
     int numBytes = 0;
-    
+
     // apply offset
     dataPtr += offset;
     // write data 1 byte at a time
@@ -804,7 +804,7 @@ void mm_free(void *ptr) {
 
     printf("\n%p", get_node_prev(nodePtr));
     printf("\n%p", get_node_next(nodePtr));
-    
+
     // return if prev or next pointers are invalid
     if (
         !is_valid_pointer(get_node_prev(nodePtr), 1)
