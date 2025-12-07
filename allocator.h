@@ -1,3 +1,4 @@
+// Copyright [year] <Copyright Owner>
 #include <stdint.h>
 int mm_init(uint8_t *heap, size_t heap_size);
 void *mm_malloc(size_t size);
