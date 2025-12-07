@@ -22,12 +22,12 @@ struct Node{
 
 
 static struct Node* headPtr;
-static struct Node* assPtr;
+static struct Node* endPtr;
 static uint8_t *heapPtr;
 static size_t heapSize;
 static uint8_t pattern[5];
 
-
+struct Node* fix_next(struct Node* nodePtr);
 
 
 int is_valid_pointer(void* ptr, int sentinels_valid) {
@@ -92,7 +92,7 @@ size_t get_node_size(struct Node* nodePtr) {
 
 struct Node* get_node_next(struct Node* nodePtr) {
     struct Node n = *(nodePtr);
-    if ((uintptr_t)nodePtr >= ((uintptr_t)assPtr - sizeof(struct Node))) {
+    if ((uintptr_t)nodePtr >= ((uintptr_t)endPtr - sizeof(struct Node))) {
         return NULL;
     }
     if (get_node_size(nodePtr)%40 == 0) {
@@ -105,7 +105,8 @@ struct Node* get_node_next(struct Node* nodePtr) {
     struct Node* correctNext = (struct Node*)(
         (uint8_t*)nodePtr + sizeof(struct Node) + tmp);
     if (!is_valid_pointer((void*)correctNext, 1)) {
-        return assPtr;
+        // this should never run but may prevent segfault if data mega corrupted
+        return endPtr;
     }
     return correctNext;
 }
@@ -120,7 +121,7 @@ struct Node* fix_ptr(struct Node* nodePtr) {
     struct Node* currentNodePtr = headPtr;
     struct Node* prevNodePtr = NULL;
     while ((get_node_next(currentNodePtr) != nodePtr)
-    && (currentNodePtr != assPtr)
+    && (currentNodePtr != endPtr)
     && (is_valid_pointer(currentNodePtr, 1))) {
         prevNodePtr = currentNodePtr;
         currentNodePtr = get_node_next(currentNodePtr);
@@ -243,6 +244,72 @@ void* get_node_data(struct Node* nodePtr) {
 
 
 
+// currently broken
+struct Node* fix_next(struct Node* nodePtr) {
+    printf("\nFIXING SIZE AND NEXT");
+    // Corrupted size: try working backwards from end
+    // to get to nodePtr and repair
+    struct Node* currentNodePtr = endPtr;
+    struct Node* nextNodePtr = NULL;
+    while ((get_node_prev(currentNodePtr) != nodePtr)
+    && (currentNodePtr != headPtr)
+    && (is_valid_pointer(currentNodePtr, 1))) {
+        nextNodePtr = currentNodePtr;
+        currentNodePtr = get_node_prev(currentNodePtr);
+    }
+    struct Node n = *(nodePtr);
+
+    if (!is_valid_pointer(currentNodePtr, 1)) {
+        // this shouldnt ever run but its here anyway
+        // corrupted from both ends - rip
+        struct Node newNextNode = *(nextNodePtr);
+        // nothing else we can do - bypass corrupted area
+        struct Node* prevNodePtr = get_node_prev(nodePtr);
+        struct Node prevNode = *(prevNodePtr);
+        prevNode.size = prevNode.size2 = prevNode.size3 = (uint32_t)(
+            (uint8_t*)nextNodePtr - (uint8_t*)get_node_data(prevNodePtr));
+        newNextNode.prev = newNextNode.prev2 = newNextNode.prev3 = prevNodePtr;
+        uint32_t newSize = (uint32_t)(
+            (uint8_t*)nextNodePtr - (uint8_t*)get_node_data(nodePtr));
+        n.size = n.size2 = n.size3 = newSize;
+        n.state = UNFREE;  // block corrupted - cannot be reallocated
+        do {
+            *(nodePtr) = n;
+        } while (!check_node(nodePtr, n));
+        do {
+            *(prevNodePtr) = prevNode;
+        } while (!check_node(prevNodePtr, prevNode));
+        do {
+            *(nextNodePtr) = newNextNode;
+        } while (!check_node(nextNodePtr, newNextNode));
+        return nextNodePtr;
+    }
+    if (currentNodePtr == headPtr) {
+        // this would mean our current node somehow doesnt exist
+        printf("\nCOULD NOT FIX SIZE, VERY VERY BAD");
+        n.size = n.size2 = n.size3 = (uint32_t)(
+            (uint8_t*)endPtr - (uint8_t*)get_node_data(nodePtr));
+        n.state = UNFREE;  // block corrupted - cannot be reallocated
+        do {
+            *(nodePtr) = n;
+        } while (!check_node(nodePtr, n));
+        return endPtr;
+    } else {
+        // we found the correct node by working forwards
+        // fix broken size
+        uint32_t correctSize = (uint32_t)(
+            (uint8_t*)currentNodePtr - (uint8_t*)get_node_data(nodePtr));
+        n.size = n.size2 = n.size3 = correctSize;
+        do {
+            *(nodePtr) = n;
+        } while (!check_node(nodePtr, n));
+        // return correct next ptr
+        return currentNodePtr;
+    }
+}
+
+
+
 
 uint8_t get_node_state(struct Node* nodePtr) {
     struct Node n = *(nodePtr);
@@ -277,15 +344,15 @@ int get_checksum(uint8_t* dataPtr, size_t size) {
 // Initialize the allocator over a provided memory block.
 // Returns 0 on success, non-zero on failure.
 int mm_init(uint8_t *heap, size_t heap_size) {
-    // initialise head and ass senitnels
+    // initialise head and end senitnels
     struct Node head;
     head.size = head.size2 = head.size3 = 0;
     head.state = UNFREE;
     head.prev = head.prev2 = head.prev3 = NULL;
-    struct Node ass;
-    ass.size = ass.size2 = ass.size3 = 0;
-    ass.state = UNFREE;
-    ass.prev = ass.prev2 = ass.prev3 = NULL;
+    struct Node end;
+    end.size = end.size2 = end.size3 = 0;
+    end.state = UNFREE;
+    end.prev = end.prev2 = end.prev3 = NULL;
 
     if (heap_size < (3*sizeof(struct Node))) {
         // not enough heap space to do anything
@@ -318,8 +385,8 @@ int mm_init(uint8_t *heap, size_t heap_size) {
     // put the head at the start of the heap
     struct Node *heapHeadPtr = (struct Node *) heap;
 
-    // put the ass  at the end of the heap
-    struct Node *heapAssPtr = (struct Node *)(
+    // put the end  at the end of the heap
+    struct Node *heapendPtr = (struct Node *)(
         (uint8_t *)heap + heap_size - sizeof(struct Node));
 
     // put heapNode in the middle
@@ -327,7 +394,7 @@ int mm_init(uint8_t *heap, size_t heap_size) {
         (uint8_t *)heap + sizeof(head));
 
     // set the prev pointers for each node
-    ass.prev = ass.prev2 = ass.prev3 = heapContentsPtr;
+    end.prev = end.prev2 = end.prev3 = heapContentsPtr;
     heapNode.prev = heapNode.prev2 = heapNode.prev3 = heapHeadPtr;
 
     // write nodes to the heap
@@ -336,16 +403,16 @@ int mm_init(uint8_t *heap, size_t heap_size) {
     } while (!check_node(heapHeadPtr, head));
 
     do {
-        *heapAssPtr = ass;
-    } while (!check_node(heapAssPtr, ass));
+        *heapendPtr = end;
+    } while (!check_node(heapendPtr, end));
 
     do {
         *heapContentsPtr = heapNode;
     } while (!check_node(heapContentsPtr, heapNode));
 
-    //  write head and ass pointers to global vars
+    //  write head and end pointers to global vars
     headPtr = heapHeadPtr;
-    assPtr = heapAssPtr;
+    endPtr = heapendPtr;
     printf("\nSIZE OF NODE: %zu", sizeof(struct Node));
     printf("\nSIZE OF HEAPNODE: %zu", sizeof(heapNode));
     return 0;
@@ -415,7 +482,7 @@ void *mm_malloc(size_t size) {
     // start at the first data node
     struct Node* currentNodePtr = (struct Node *) get_node_next(headPtr);
     struct Node currentNode = *currentNodePtr;
-    // check all nodes until we find a free one of sufficient size, or reach ass
+    // check all nodes until we find a free one of sufficient size, or reach end
     while ((!end) && (!found)) {
         printf("\n CURRENT NODE SIZE: %zu", get_node_size(currentNodePtr));
         if (
@@ -558,7 +625,6 @@ int mm_write(void *ptr, size_t offset, const void *src, size_t len) {
         printf("\nBLOCK TOO SMALL");
         return -1;
     }
-    //memset(dataPtr, 0, size);
 
     // write data 1 byte at a time
     int numBytes = 0;
@@ -572,7 +638,7 @@ int mm_write(void *ptr, size_t offset, const void *src, size_t len) {
         } while ( *(dataPtr+i) != *(source+i) );
         numBytes++;
     }
-    
+
     uint16_t checksum = get_checksum((uint8_t*)src, len);
     n.checksum = checksum;
     do {
