@@ -11,11 +11,14 @@
 
 // define metadata nodes in singly linked list
 struct Node{
-    size_t size;  // size of memory block
+    uint32_t size;  // size of memory block
+    uint32_t size2;  // size of memory block
+    uint32_t size3;  // size of memory block
     uint8_t state;  // free or not free
-    size_t size2;  // size of memory block
-    size_t size3;  // size of memory block
     uint16_t checksum;  // checksum
+    struct Node* prev1;
+    struct Node* prev2;
+    struct Node* prev3;
 };
 
 
@@ -197,7 +200,7 @@ int mm_init(uint8_t *heap, size_t heap_size) {
         (heap_size - 3*sizeof(struct Node)), FREE
     };
     heapPtr = heap;
-    heapNode.size = heapNode.size2 = heapNode.size3 = (
+    heapNode.size = heapNode.size2 = heapNode.size3 = (uint32_t)(
         heap_size - 3*sizeof(struct Node));
 
     heapNode.checksum = 0;
@@ -239,6 +242,7 @@ int mm_init(uint8_t *heap, size_t heap_size) {
 
 
 void resize_node(struct Node* nodePtr, size_t size) {
+    size = (uint32_t)size;
     // initialise current node as n
     struct Node n = *(nodePtr);
 
@@ -276,10 +280,11 @@ void resize_node(struct Node* nodePtr, size_t size) {
 // NULL on failure.
 void *mm_malloc(size_t size) {
     printf("\nALLOCATING BLOCK OF SIZE %zu", size);
+    size = (uint32_t)size;
     if (size < 1) {
         return NULL;
     }
-    size_t aligned_size;
+    uint32_t aligned_size;
     if (size %40 != 0) {
         aligned_size = size + (40 - (size%40));
     } else {
@@ -349,6 +354,8 @@ void *mm_malloc(size_t size) {
 // Safely read data from an allocated block starting at offset bytes into buf
 // Returns the num of bytes read, or -1 if corruption or invalid ptr detected
 int mm_read(void *ptr, size_t offset, void *buf, size_t len) {
+    offset = (uint32_t)offset;
+    len = (uint32_t)len;
     ptr = (void*)((uint8_t*)ptr - sizeof(struct Node));  // data ptr to node ptr
     // return if pointer invalid
     if (((uint8_t*)ptr) < heapPtr || ((uint8_t*)ptr) > (heapPtr + heapSize)) {
@@ -373,7 +380,7 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len) {
 
     uint8_t* dataPtr = (uint8_t*)get_node_data(nodePtr);
     uint8_t* buff = (uint8_t*)buf;
-    size_t size = get_node_size(nodePtr);
+    uint32_t size = get_node_size(nodePtr);
     // return -1 if block is free or doesnt exist
     if (get_node_state(nodePtr) != UNFREE) {
         printf("CANNOT WRITE TO FREE BLOCK");
@@ -390,7 +397,7 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len) {
     dataPtr += offset;
 
     // read data 1 byte at a time
-    for (size_t i = 0; i < len; i++) {
+    for (uint32_t i = 0; i < len; i++) {
         do {
             *(buff+i) = *(dataPtr+i);
         } while (*(buff+i) != *(dataPtr+i));
@@ -406,6 +413,8 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len) {
 // Safely write data into an allocated block starting at offset bytes from src.
 // Returns the num of bytes written, or -1 if corruption or invalid ptr detected
 int mm_write(void *ptr, size_t offset, const void *src, size_t len) {
+    offset = (uint32_t)offset;
+    len = (uint32_t)len;
     ptr = (void*)((uint8_t*)ptr - sizeof(struct Node));  // data ptr to node ptr
 
     // return if pointer invalid
@@ -418,7 +427,7 @@ int mm_write(void *ptr, size_t offset, const void *src, size_t len) {
     struct Node n = *nodePtr;
     uint8_t* dataPtr = (uint8_t*)get_node_data(nodePtr);
     uint8_t* source = (uint8_t*)src;
-    size_t size = get_node_size(nodePtr);
+    uint32_t size = get_node_size(nodePtr);
     // nuh uh if block is free or doesnt exist
     if (get_node_state(nodePtr) != UNFREE) {
         printf("\nCANNOT WRITE TO FREE BLOCK");
@@ -435,7 +444,7 @@ int mm_write(void *ptr, size_t offset, const void *src, size_t len) {
     // apply offset
     dataPtr += offset;
     // write data 1 byte at a time
-    for (size_t i = 0; i < (len); i++) {
+    for (uint32_t i = 0; i < (len); i++) {
         // ensure each byte is written correctly
         do {
             *(dataPtr+i) = *(source+i);
@@ -465,6 +474,7 @@ int mm_write(void *ptr, size_t offset, const void *src, size_t len) {
 
 // overwrite a node's data with the 5 byte pattern
 void overwrite_data(uint8_t* dataPtr, size_t size) {
+    size = (uint32_t)size;
     if (size == 0) {
         // this shouldnt ever run
         return;
@@ -501,7 +511,7 @@ void merge_node(struct Node* nodePtr) {
         struct Node prevNode = *prevNodePtr;
 
         // get new size of merged node
-        size_t newSize = (size_t)(
+        uint32_t newSize = (uint32_t)(
             (uint8_t*)get_node_next(nextNodePtr)
             - (uint8_t*)get_node_data(prevNodePtr));
         // update node
@@ -517,7 +527,7 @@ void merge_node(struct Node* nodePtr) {
     // only previous node free -> merge both into previous
     } else if (get_node_state(prevNodePtr) == FREE) {
         // get new size of merged node
-        size_t newSize = (size_t)(
+        uint32_t newSize = (uint32_t)(
             (uint8_t*)get_node_next(currentNodePtr)
             - (uint8_t*)get_node_data(prevNodePtr));
 
@@ -532,7 +542,7 @@ void merge_node(struct Node* nodePtr) {
         overwrite_data(get_node_data(prevNodePtr), newSize);
     // only next node free -> merge both into current
     } else if (get_node_state(nextNodePtr) == FREE) {
-        size_t newSize = (size_t)(
+        uint32_t newSize = (uint32_t)(
             (uint8_t*)get_node_next(nextNodePtr)
             - (uint8_t*)get_node_data(currentNodePtr));
 
@@ -594,7 +604,7 @@ void mm_free(void *ptr) {
     }
     struct Node n = *nodePtr;
     // get size of node
-    size_t size = n.size;
+    uint32_t size = n.size;
     // free node BEFORE calling merge_node() - IMPORTANT
     n.state = FREE;
     // write to heap
@@ -605,7 +615,7 @@ void mm_free(void *ptr) {
     // Merge with adjacent frees and overwrite data with 5B pattern
     merge_node(nodePtr);
 
-    printf("\nSUCCESSFULLY FREED BLOCK OF SIZE %zu", size);
+    printf("\nSUCCESSFULLY FREED BLOCK OF SIZE %zu", (size_t)size);
     return;
 }
 
@@ -613,6 +623,7 @@ void mm_free(void *ptr) {
 // preserving data. [See additional credit]
 void *mm_realloc(void *ptr, size_t new_size) {
     printf("\nREALLOCATING BLOCK TO SIZE %zu", new_size);
+    new_size = (uint32_t)new_size;
 
     // check for null or invalid pointer
     if (ptr == NULL || !is_valid_pointer(ptr, 0)) {
@@ -630,7 +641,7 @@ void *mm_realloc(void *ptr, size_t new_size) {
 
     struct Node* nodePtr = ptr;
     struct Node n = *nodePtr;
-    size_t old_size = get_node_size(nodePtr);
+    uint32_t old_size = get_node_size(nodePtr);
     if (get_node_state(nodePtr) != UNFREE) {
         // cannot realloc a free block
         printf("\nCANNOT REALLOC A FREE BLOCK");
@@ -648,7 +659,7 @@ void *mm_realloc(void *ptr, size_t new_size) {
             > sizeof(struct Node)
         ) {
             // resize node to smaller size if sufficient space
-            size_t aligned_size;
+            uint32_t aligned_size;
             if (new_size %40 != 0) {
                 aligned_size = new_size + (40 - (new_size%40));
             } else {
@@ -714,11 +725,11 @@ void *mm_realloc(void *ptr, size_t new_size) {
             // save data to temp storage
             mm_write(tmpDataStorage, 0, oldDataPtr, old_size);
             // merge current, prev and next nodes into one supernode :)
-            size_t combined_size =
+            uint32_t combined_size =
                 old_size + 2*sizeof(struct Node)
                 + get_node_size(nextNodePtr)
                 + get_node_size(prevNodePtr);
-            size_t aligned_size;
+            uint32_t aligned_size;
             prevNode.size = prevNode.size2 = prevNode.size3 = combined_size;
             do {
                 *prevNodePtr = prevNode;
@@ -752,9 +763,9 @@ void *mm_realloc(void *ptr, size_t new_size) {
             + get_node_size(nextNodePtr)) >= new_size)
         ) {
             // merge with next node
-            size_t combined_size =
+            uint32_t combined_size =
                 old_size + sizeof(struct Node) + get_node_size(nextNodePtr);
-            size_t aligned_size;
+            uint32_t aligned_size;
             n.size = n.size2 = n.size3 = combined_size;
             do {
                 *nodePtr = n;
@@ -813,10 +824,10 @@ void *mm_realloc(void *ptr, size_t new_size) {
             // save data to temp storage
             mm_write(tmpDataStorage, 0, oldDataPtr, old_size);
             // merge current, prev and next nodes into one supernode :)
-            size_t combined_size =
+            uint32_t combined_size =
                 old_size + sizeof(struct Node)
                 + get_node_size(prevNodePtr);
-            size_t aligned_size;
+            uint32_t aligned_size;
             prevNode.size = prevNode.size2 = prevNode.size3 = combined_size;
             do {
                 *prevNodePtr = prevNode;
@@ -828,7 +839,7 @@ void *mm_realloc(void *ptr, size_t new_size) {
                 aligned_size = new_size;
             }
             if ((combined_size - aligned_size) > sizeof(struct Node)) {
-                printf("\nALIGNED SIZE: %zu", aligned_size);
+                printf("\nALIGNED SIZE: %zu", (size_t)aligned_size);
                 // resize if enough space left over
                 resize_node(prevNodePtr, aligned_size);
 
