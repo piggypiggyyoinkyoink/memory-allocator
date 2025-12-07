@@ -479,13 +479,13 @@ void *mm_malloc(size_t size) {
 int mm_read(void *ptr, size_t offset, void *buf, size_t len) {
     offset = (uint32_t)offset;
     len = (uint32_t)len;
-    ptr = (void*)((uint8_t*)ptr - sizeof(struct Node));  // data ptr to node ptr
+    struct Node* nodePtr = (struct Node*)(
+        (uint8_t*)ptr - sizeof(struct Node));  // data ptr to node ptr
     // return if pointer invalid
-    if (((uint8_t*)ptr) < heapPtr || ((uint8_t*)ptr) > (heapPtr + heapSize)) {
+    if (!is_valid_pointer(ptr, 0)) {
         printf("\nINVALID POINTER IN MM_READ");
         return -1;
     }
-    struct Node* nodePtr = ptr;
     struct Node n = *nodePtr;
 
     // check for data corruption
@@ -514,6 +514,10 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len) {
         printf("READ GOES OUT OF BOUNDS");
         return -1;
     }
+    if (size > heapSize) {
+        printf("NODE SIZE BIGGER THAN HEAP SIZE");
+        return -1;
+    }
 
     int numBytes = 0;
     // apply offset
@@ -526,6 +530,15 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len) {
         } while (*(buff+i) != *(dataPtr+i));
         // printf("\n%d", *(buff+i));
         numBytes++;
+    }
+    printf("\nCHECKSUM READ: %d", get_checksum(buff, numBytes));
+    printf("\nCHECKSUM ACTUAL: %d\n", get_checksum((uint8_t*)(dataPtr), numBytes));
+    printf("%p", dataPtr);
+    printf("%zu", (size_t)offset);
+    printf("%p", (uint8_t*)(dataPtr+offset));
+    if (get_checksum(buff, numBytes) != get_checksum((uint8_t*)(dataPtr), numBytes)) {
+        printf("DATA READ INCORRECTLY");
+        return -1;
     }
     return numBytes;
 }
@@ -576,13 +589,13 @@ int mm_write(void *ptr, size_t offset, const void *src, size_t len) {
     }
     dataPtr = (uint8_t*)get_node_data(nodePtr);
     // if partial write occurs
-    if (len < (size-offset)) {
-        // pad remaining bytes with zeros
-        memset(dataPtr + offset + len, 0, size - (offset + len));
-    }
+    // if (len < (size-offset)) {
+    //     // pad remaining bytes with zeros
+    //     memset(dataPtr + offset + len, 0, size - (offset + len));
+    // }
 
     // update checksum
-    uint16_t checksum = get_checksum((uint8_t*)src, size);
+    uint16_t checksum = get_checksum((uint8_t*)dataPtr, size);
     n.checksum = checksum;
 
     // write to heap

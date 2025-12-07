@@ -73,7 +73,7 @@ int main() {
     int y = mm_write(ptr4, 0, src, 4);
     printf("\n WRITTEN DATA: %d", y);
 
-    int x = mm_read(ptr4, 0, buf, 256);
+    int x = mm_read(ptr4, 0, buf, 4);
     printf("\n READ DATA: %d", x);
 
     printf("\n\nFreeing ptr4");
@@ -96,7 +96,7 @@ int main() {
 
     char msg[] = "Hello world!";
     int numB1 = mm_write(a, 5, msg, sizeof(msg));
-    a = mm_realloc(a, 64);
+    //a = mm_realloc(a, 64);
     char bufff[32];
     memset(bufff, 0, sizeof(bufff));
     int numB2 = mm_read(a, 5, bufff, sizeof(msg));
