@@ -119,7 +119,7 @@ struct Node* get_node_next(struct Node* nodePtr) {
 
 
 
-struct Node* fix_ptr(struct Node* nodePtr) {
+struct Node* fix_prev(struct Node* nodePtr) {
     printf("\nFIXING PTR");
     // Corrupted prev ptr: try working forwards from head
     // to get to nodePtr and repair
@@ -358,7 +358,7 @@ struct Node* check_prev_next(struct Node* nodePtr, uint8_t dir) {
         // prev
         struct Node* prevNodePtr = get_node_prev(nodePtr);
         if (!is_valid_pointer(prevNodePtr, 1)) {
-            return fix_ptr(nodePtr);
+            return fix_prev(nodePtr);
         } else {
             return prevNodePtr;
         }
