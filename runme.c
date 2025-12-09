@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
+#include <pthread.h>
 #include <time.h>
 #include "./allocator.h"
 // ChatGPT-written helper for printing PASS/FAIL
@@ -31,6 +32,35 @@ static inline size_t rand_size(size_t max) {
 }
 
 static void* ptrs[1000];
+static volatile int STOP_CORRUPTOR = 0;
+static size_t BITFLIPS_PER_SEC = 10000000;   // Tune this!
+static uint8_t *GLOBAL_HEAP = NULL;
+static size_t   GLOBAL_HEAP_SIZE = 0;
+
+//
+// ==========  CORRUPTION THREAD  ==========
+//
+void *heap_corruptor_thread(void *arg) {
+    printf("[CORRUPTOR] Flipping ~%zu bits/sec...\n", BITFLIPS_PER_SEC);
+    // do BITFLIPS_PER_SEC / 100 bitflips every 10ms
+    while (!STOP_CORRUPTOR) {
+        for (size_t i = 0; i < BITFLIPS_PER_SEC / 100; i++) {
+            size_t pos = rand() % GLOBAL_HEAP_SIZE;
+            uint8_t bit = 1u << (rand() % 8);
+            GLOBAL_HEAP[pos] ^= bit;     // Flip bit
+        }
+
+        // sleep ~10ms
+        struct timespec ts = {.tv_sec = 0, .tv_nsec = 10 * 1000 * 1000};
+        nanosleep(&ts, NULL);
+    }
+
+    printf("[CORRUPTOR] Thread stopped.\n");
+    return NULL;
+}
+
+
+
 //
 // Benchmark helpers
 //
@@ -380,12 +410,46 @@ int main() {
 
     srand(12345);
 
-    bench_malloc(100);
-    bench_free(100);
+    bench_malloc(1000);
+    bench_free(1000);
     bench_realloc(1e3);
     bench_rw(5e3, 256);
-    bench_mixed(2e3);
+    bench_mixed(5e3);
 
     free(heap);
+    GLOBAL_HEAP = malloc(HEAP_SIZE);
+    GLOBAL_HEAP_SIZE = HEAP_SIZE;
+
+    if (!GLOBAL_HEAP) {
+        printf("Failed to allocate heap.\n");
+        return 1;
+    }
+
+    printf("Initializing allocator...\n");
+    if (mm_init(GLOBAL_HEAP, HEAP_SIZE) != 0) {
+        printf("mm_init failed!\n");
+        return 1;
+    }
+
+    srand(12345);
+
+    // Start bit-flipping thread
+    pthread_t corruptor;
+    pthread_create(&corruptor, NULL, heap_corruptor_thread, NULL);
+
+    //
+    // --- RUN BENCHMARKS ---
+    //
+    bench_malloc(1000);
+    bench_free(1000);
+    bench_realloc(1e3);
+    bench_rw(5e3, 256);
+    bench_mixed(5e3);
+
+    // Stop corruptor thread
+    STOP_CORRUPTOR = 1;
+    pthread_join(corruptor, NULL);
+
+    free(GLOBAL_HEAP);
     return 0;
 }
