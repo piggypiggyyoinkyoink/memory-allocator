@@ -134,9 +134,9 @@ struct Node* fix_prev(struct Node* nodePtr) {
     // to get to nodePtr and repair
     struct Node* currentNodePtr = headPtr;
     struct Node* prevNodePtr = NULL;
-    while ((get_node_next(currentNodePtr) != nodePtr)
+    while ((is_valid_pointer(currentNodePtr, 1)
     && (currentNodePtr != endPtr)
-    && (is_valid_pointer(currentNodePtr, 1))) {
+    && (get_node_next(currentNodePtr) != nodePtr))) {
         prevNodePtr = currentNodePtr;
         currentNodePtr = get_node_next(currentNodePtr);
     }
@@ -164,10 +164,11 @@ struct Node* fix_prev(struct Node* nodePtr) {
             } while (!check_node(prevNodePtr, newPrevNode));
             return prevNodePtr;
         }
-        // attempt to read corrupted node metadata
-        struct Node corruptedNode = *(corrputedNodePtr);
 
-        if (get_node_next(corrputedNodePtr) == nodePtr) {
+        // attempt to read corrupted node metadata
+        if (is_valid_pointer(corrputedNodePtr, 0)
+        && get_node_next(corrputedNodePtr) == nodePtr) {
+            struct Node corruptedNode = *(corrputedNodePtr);
             // we know then that this is the correct node
             n.prev = n.prev2 = n.prev3 = corrputedNodePtr;
             do {
@@ -181,11 +182,18 @@ struct Node* fix_prev(struct Node* nodePtr) {
             } while (!check_node(corrputedNodePtr, corruptedNode));
             return corrputedNodePtr;
         } else {
+            if (!is_valid_pointer(corrputedNodePtr, 0)) {
+                n.prev = n.prev2 = n.prev3 = headPtr;
+                do {
+                    *(nodePtr) = n;
+                } while (!check_node(nodePtr, n));
+                return headPtr;
+            } 
             // cannot trust corrupted node at all
-            // overwrite corrupted area with new data
+            // overwrite corrupted area
             struct Node newNode;
             struct Node* newNodePtr = corrputedNodePtr;
-            newNode.state = FREE;
+            newNode.state = UNFREE;  // corruption - cannot be reused
             // calculate new node size
             // i hate cpplint
             newNode.size = newNode.size2 = newNode.size3 = (
@@ -262,9 +270,9 @@ struct Node* fix_next(struct Node* nodePtr) {
     // to get to nodePtr and repair
     struct Node* currentNodePtr = endPtr;
     struct Node* nextNodePtr = NULL;
-    while ((get_node_prev(currentNodePtr) != nodePtr)
+    while ((is_valid_pointer(currentNodePtr, 1))
     && (currentNodePtr != headPtr)
-    && (is_valid_pointer(currentNodePtr, 1))) {
+    && (get_node_prev(currentNodePtr) != nodePtr)) {
         nextNodePtr = currentNodePtr;
         currentNodePtr = get_node_prev(currentNodePtr);
     }
