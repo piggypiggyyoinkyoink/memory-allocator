@@ -50,7 +50,7 @@ int main() {
     mm_free(ptr2);
 
     printf("\n\nAllocating ptr4");
-    void* ptr4 = mm_malloc(100);
+    void* ptr4 = mm_malloc(4);
 
     printf("\n\nAllocating ptr5");
     void* ptr5 = mm_malloc(120);
@@ -73,7 +73,7 @@ int main() {
     int y = mm_write(ptr4, 0, src, 4);
     printf("\n WRITTEN DATA: %d", y);
 
-    int x = mm_read(ptr4, 0, buf, 256);
+    int x = mm_read(ptr4, 0, buf, 4);
     printf("\n READ DATA: %d", x);
 
     printf("\n\nFreeing ptr4");

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <iso646.h>
+#include <pthread.h>
 #include "./allocator.h"
 #define FREE 0
 #define UNFREE 255
@@ -29,6 +30,8 @@ static struct Node* endPtr;
 static uint8_t *heapPtr;
 static size_t heapSize;
 static uint8_t pattern[5];
+
+pthread_mutex_t lock;
 
 struct Node* fix_next(struct Node* nodePtr);
 
@@ -378,6 +381,7 @@ struct Node* check_prev_next(struct Node* nodePtr, uint8_t dir) {
 // Initialize the allocator over a provided memory block.
 // Returns 0 on success, non-zero on failure.
 int mm_init(uint8_t *heap, size_t heap_size) {
+    pthread_mutex_lock(&lock);
     // initialise head and end senitnels
     struct Node head;
     head.size = head.size2 = head.size3 = 0;
@@ -391,6 +395,8 @@ int mm_init(uint8_t *heap, size_t heap_size) {
     if (heap_size < (3*sizeof(struct Node))) {
         // not enough heap space to do anything
         printf("Uh oh");
+        pthread_mutex_unlock(&lock);
+
         return -1;
     }
     // Get 5-byte pattern
@@ -449,6 +455,7 @@ int mm_init(uint8_t *heap, size_t heap_size) {
     endPtr = heapendPtr;
     printf("\nSIZE OF NODE: %zu", sizeof(struct Node));
     printf("\nSIZE OF HEAPNODE: %zu", sizeof(heapNode));
+    pthread_mutex_unlock(&lock);
     return 0;
 }
 
@@ -503,6 +510,8 @@ void resize_node(struct Node* nodePtr, size_t size) {
 // Allocate a block with ALIGN-byte aligned payload. Returns
 // NULL on failure.
 void *mm_malloc(size_t size) {
+    pthread_mutex_lock(&lock);
+
     printf("\nALLOCATING BLOCK OF SIZE %zu", size);
     if (size < 1) {
         return NULL;
@@ -526,6 +535,8 @@ void *mm_malloc(size_t size) {
             // reached end of heap without finding suitable block
             end = 1;
             printf("\nREACHED END OF HEAP");
+            pthread_mutex_unlock(&lock);
+
             return NULL;
         }
         if (
@@ -561,11 +572,15 @@ void *mm_malloc(size_t size) {
             printf("\nALLOCATION SUCCESSFUL");
             // get data ptr to return
             void* dataPtr = get_node_data(currentNodePtr);
+            pthread_mutex_unlock(&lock);
+
             return dataPtr;
         } else if (get_node_next(currentNodePtr) == NULL) {
             // no available nodes of sufficient size
             end = 1;
             printf("\nNO FREE MEMORY BLOCKS BIG ENOUGH");
+            pthread_mutex_unlock(&lock);
+
             return NULL;
         } else {
             // try next node
@@ -576,6 +591,8 @@ void *mm_malloc(size_t size) {
         }
     }
     printf("RETURNING NULL");
+    pthread_mutex_unlock(&lock);
+
     return NULL;
 }
 
@@ -585,10 +602,13 @@ void *mm_malloc(size_t size) {
 // Safely read data from an allocated block starting at offset bytes into buf
 // Returns the num of bytes read, or -1 if corruption or invalid ptr detected
 int mm_read(void *ptr, size_t offset, void *buf, size_t len) {
+    pthread_mutex_lock(&lock);
+
     ptr = (void*)((uint8_t*)ptr - sizeof(struct Node));  // data ptr to node ptr
     // return if pointer invalid
     if (((uint8_t*)ptr) < heapPtr || ((uint8_t*)ptr) > (heapPtr + heapSize)) {
         printf("\nINVALID POINTER IN MM_READ");
+        pthread_mutex_unlock(&lock);
         return -1;
     }
     struct Node* nodePtr = ptr;
@@ -604,6 +624,8 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len) {
         != n.checksum
     ) {
         printf("\nDATA CORRUPTION DETECTED IN MM_READ");
+        pthread_mutex_unlock(&lock);
+
         return -1;
     }
 
@@ -613,11 +635,15 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len) {
     // nuh uh if block is free or doesnt exist
     if (get_node_state(nodePtr) != UNFREE) {
         printf("CANNOT WRITE TO FREE BLOCK");
+        pthread_mutex_unlock(&lock);
+
         return -1;
     }
     // return -1 if try to read too much
     if (len > (size-offset)) {
         printf("READ GOES OUT OF BOUNDS");
+        pthread_mutex_unlock(&lock);
+
         return -1;
     }
 
@@ -635,6 +661,7 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len) {
         // printf("\n%d", *(buff+i));
         numBytes++;
     }
+    pthread_mutex_unlock(&lock);
     return numBytes;
 }
 
@@ -644,11 +671,16 @@ int mm_read(void *ptr, size_t offset, void *buf, size_t len) {
 // Safely write data into an allocated block starting at offset bytes from src.
 // Returns the num of bytes written, or -1 if corruption or invalid ptr detected
 int mm_write(void *ptr, size_t offset, const void *src, size_t len) {
+    
+    pthread_mutex_lock(&lock);
+
     ptr = (void*)((uint8_t*)ptr - sizeof(struct Node));  // data ptr to node ptr
 
     // return if pointer invalid
     if (((uint8_t*)ptr) < heapPtr || ((uint8_t*)ptr) > (heapPtr + heapSize)) {
         printf("\nINVALID POINTER IN MM_WRITE");
+        pthread_mutex_unlock(&lock);
+
         return -1;
     }
 
@@ -660,11 +692,15 @@ int mm_write(void *ptr, size_t offset, const void *src, size_t len) {
     // nuh uh if block is free or doesnt exist
     if (get_node_state(nodePtr) != UNFREE) {
         printf("\nCANNOT WRITE TO FREE BLOCK");
+        pthread_mutex_unlock(&lock);
+
         return -1;
     }
     // nuh uh if len is bigger than the size of the block
     if ((len > (size-offset)) || (offset > size)) {
         printf("\nBLOCK TOO SMALL");
+        pthread_mutex_unlock(&lock);
+
         return -1;
     }
 
@@ -681,17 +717,21 @@ int mm_write(void *ptr, size_t offset, const void *src, size_t len) {
         numBytes++;
     }
 
-    uint16_t checksum = get_checksum((uint8_t*)src, len);
+    uint16_t checksum = get_checksum(
+        (uint8_t*)get_node_data(nodePtr), get_node_size(nodePtr));
     n.checksum = checksum;
     do {
         *nodePtr = n;
     } while (!check_node(nodePtr, n));
     // if partial write occurs
-    if (len < (size-offset)) {
+    if (len < (size-offset) || numBytes != len) {
         printf("\nPARTIAL WRITE OCCURRED");
-        // pad remaining bytes with zeros
-        memset(dataPtr + numBytes, 0, size - (offset + numBytes + 1));
+        pthread_mutex_unlock(&lock);
+
+        return -1;
     }
+    pthread_mutex_unlock(&lock);
+
     return numBytes;
 }
 
@@ -832,16 +872,22 @@ void merge_node(struct Node* nodePtr) {
 // Free a previously-allocated pointer (ignore NULL).
 // Must detect double-free.
 void mm_free(void *ptr) {
+    pthread_mutex_lock(&lock);
+
     ptr = (void*)((uint8_t*)ptr - sizeof(struct Node));  // data ptr to node ptr
 
     // check for null pointer
     if (ptr == NULL) {
         printf("\nCANNOT FREE NULL POINTER");
+        pthread_mutex_unlock(&lock);
+
         return;
     }
     // return if pointer is invalid
     if (!is_valid_pointer(ptr, 0)) {
         printf("\nINVALID POINTER");
+        pthread_mutex_unlock(&lock);
+
         return;
     }
 
@@ -858,12 +904,16 @@ void mm_free(void *ptr) {
         !is_valid_pointer(check_prev_next(nodePtr, NEXT), 1)
     ) {
         printf("\nINVALID PREV/NEXT POINTER");
+        pthread_mutex_unlock(&lock);
+
         return;
     }
 
     // check for double free
     if (get_node_state(nodePtr) != UNFREE) {
         printf("\nCANNOT FREE NON-UNFREE NODE");
+        pthread_mutex_unlock(&lock);
+
         return;
     }
     struct Node n = *nodePtr;
@@ -879,6 +929,8 @@ void mm_free(void *ptr) {
     merge_node(nodePtr);
 
     printf("\nSUCCESSFULLY FREED BLOCK OF SIZE %zu", size);
+    pthread_mutex_unlock(&lock);
+
     return;
 }
 
@@ -888,18 +940,24 @@ void mm_free(void *ptr) {
 // Resize a previously allocated block to new_size bytes,
 // preserving data. [See additional credit]
 void *mm_realloc(void *ptr, size_t new_size) {
+    pthread_mutex_lock(&lock);
+
     printf("\nREALLOCATING BLOCK TO SIZE %zu", new_size);
     new_size = (uint32_t)new_size;
 
     // check for null or invalid pointer
     if (ptr == NULL || !is_valid_pointer(ptr, 0)) {
         printf("\nINVALID POINTER IN MM_REALLOC");
+        pthread_mutex_unlock(&lock);
+
         return NULL;
     }
 
     // check for size 0
     if (new_size == 0) {
         printf("\nCANNOT REALLOC TO SIZE 0");
+        pthread_mutex_unlock(&lock);
+
         return NULL;
     }
 
@@ -911,12 +969,16 @@ void *mm_realloc(void *ptr, size_t new_size) {
     if (get_node_state(nodePtr) != UNFREE) {
         // cannot realloc a free block
         printf("\nCANNOT REALLOC A FREE BLOCK");
+        pthread_mutex_unlock(&lock);
+
         return NULL;
     }
 
     if (old_size == new_size) {
         // no resizing needed
         printf("\nREALLOC: NODE UNCHANGED");
+        pthread_mutex_unlock(&lock);
+
         return get_node_data(nodePtr);
     } else if (new_size < old_size) {
         // node needs shrinking
@@ -943,11 +1005,15 @@ void *mm_realloc(void *ptr, size_t new_size) {
                 *nodePtr = n;
             } while (!check_node(nodePtr, n));
             printf("\nREALLOC: NODE SHRUNK");
+            pthread_mutex_unlock(&lock);
+
             return get_node_data(nodePtr);
 
         } else {
             // not enough room to create a new node, leave node unchanged
             printf("\nREALLOC: NODE UNCHANGED");
+            pthread_mutex_unlock(&lock);
+
             return get_node_data(nodePtr);
         }
     } else {
@@ -976,7 +1042,9 @@ void *mm_realloc(void *ptr, size_t new_size) {
             } while (!check_node(nextNodePtr, nextNode));
             // get old data before overwritingness
             void* oldDataPtr = get_node_data(nodePtr);
+            pthread_mutex_unlock(&lock);
             void* tmpDataStorage = mm_malloc(old_size);
+            pthread_mutex_lock(&lock);
             if (tmpDataStorage == NULL) {
                 // allocation failed
                 // re-free-ify prev and next nodes
@@ -988,10 +1056,14 @@ void *mm_realloc(void *ptr, size_t new_size) {
                 do {
                     *nextNodePtr = nextNode;
                 } while (!check_node(nextNodePtr, nextNode));
+                pthread_mutex_unlock(&lock);
+
                 return NULL;
             }
             // save data to temp storage
+            pthread_mutex_unlock(&lock);
             mm_write(tmpDataStorage, 0, oldDataPtr, old_size);
+            pthread_mutex_lock(&lock);
             // merge current, prev and next nodes into one supernode :)
             uint32_t combined_size =
                 old_size + 2*sizeof(struct Node)
@@ -1019,6 +1091,7 @@ void *mm_realloc(void *ptr, size_t new_size) {
                 *prevNodePtr = prevNode;
             } while (!check_node(prevNodePtr, prevNode));
             // copy data back to reallocated block
+            pthread_mutex_unlock(&lock);
             mm_write(get_node_data(prevNodePtr), 0,
                     tmpDataStorage, old_size);
             mm_free(tmpDataStorage);
@@ -1064,6 +1137,7 @@ void *mm_realloc(void *ptr, size_t new_size) {
             } while (!check_node(nodePtr, n));
             printf("\nREALLOC: NODE EXPANDED INTO NEXT");
             // return pointer
+            pthread_mutex_unlock(&lock);
             return get_node_data(nodePtr);
         // check if prev node is free and has enough space
         } else if (
@@ -1078,7 +1152,9 @@ void *mm_realloc(void *ptr, size_t new_size) {
             } while (!check_node(prevNodePtr, prevNode));
             // get old data before overwritingness
             void* oldDataPtr = get_node_data(nodePtr);
+            pthread_mutex_unlock(&lock);
             void* tmpDataStorage = mm_malloc(old_size);
+            pthread_mutex_lock(&lock);
             if (tmpDataStorage == NULL) {
                 // allocation failed
                 // re-free-ify prev node
@@ -1086,11 +1162,14 @@ void *mm_realloc(void *ptr, size_t new_size) {
                 do {
                     *prevNodePtr = prevNode;
                 } while (!check_node(prevNodePtr, prevNode));
+                pthread_mutex_unlock(&lock);
                 return NULL;
             }
 
             // save data to temp storage
+            pthread_mutex_unlock(&lock);
             mm_write(tmpDataStorage, 0, oldDataPtr, old_size);
+            pthread_mutex_lock(&lock);
             // merge current, prev and next nodes into one supernode :)
             uint32_t combined_size =
                 old_size + sizeof(struct Node)
@@ -1120,6 +1199,8 @@ void *mm_realloc(void *ptr, size_t new_size) {
                 *prevNodePtr = prevNode;
             } while (!check_node(prevNodePtr, prevNode));
             // copy data back to reallocated block
+            pthread_mutex_unlock(&lock);
+
             mm_write(get_node_data(prevNodePtr), 0,
                     tmpDataStorage, old_size);
             mm_free(tmpDataStorage);
@@ -1129,20 +1210,27 @@ void *mm_realloc(void *ptr, size_t new_size) {
         // unable to expand into adjacent nodes
         } else {
             // look elsewhere
+            pthread_mutex_unlock(&lock);
             void* newPtr = mm_malloc(new_size);
+            pthread_mutex_lock(&lock);
             struct Node* newNodePtr = (struct Node*)(
                 (uint8_t*)newPtr - sizeof(struct Node));
             struct Node newNode = *newNodePtr;
             if (newPtr == NULL) {
+                pthread_mutex_unlock(&lock);
                 // allocation failed
                 return NULL;
             } else {
                 // copy data to new block
+                pthread_mutex_unlock(&lock);
+
                 mm_write(newPtr, 0,
                     get_node_data(nodePtr), old_size);
 
                 // free old block
                 mm_free(get_node_data(nodePtr));
+                pthread_mutex_lock(&lock);
+
                 newNode.state = UNFREE;
                 // update checksum of new block
                 newNode.checksum = get_checksum(
@@ -1151,6 +1239,7 @@ void *mm_realloc(void *ptr, size_t new_size) {
                     *newNodePtr = newNode;
                 } while (!check_node(newNodePtr, newNode));
                 printf("\nREALLOC: NEW BLOCK ALLOCATED");
+                pthread_mutex_unlock(&lock);
                 return newPtr;
             }
         }
