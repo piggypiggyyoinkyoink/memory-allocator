@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
+#include <time.h>
 #include "./allocator.h"
 // ChatGPT-written helper for printing PASS/FAIL
 #define TEST(name, expr) do { \
@@ -11,6 +12,142 @@
     if (expr) printf("PASS\n"); \
     else      printf("FAIL\n"); \
 } while (0)
+
+
+
+// Utility: nanos
+//
+static inline double now_sec() {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (double)ts.tv_sec + (double)ts.tv_nsec / 1e9;
+}
+
+//
+// Random small size generator
+//
+static inline size_t rand_size(size_t max) {
+    return (rand() % max) + 1;
+}
+
+static void* ptrs[1000];
+//
+// Benchmark helpers
+//
+void bench_malloc(size_t iters) {
+    printf("=== Allocation/Free Benchmark (%zu ops) ===\n", iters);
+    double t0 = now_sec();
+    for (size_t i = 0; i < iters; i++) {
+        void *p = mm_malloc(64);
+        if (!p) {
+            printf("Allocation failed on iteration %zu!\n", i);
+            return;
+        }
+        ptrs[i] = p;
+    }
+    double t1 = now_sec();
+
+    printf("Time: %.6f sec (%.2f ops/sec)\n",
+        t1 - t0, (iters) / (t1 - t0));
+}
+
+void bench_free(size_t iters) {
+    printf("=== Free Benchmark (%zu ops) ===\n", iters);
+    double t0 = now_sec();
+    for (size_t i = 0; i < iters; i++) {
+        mm_free(ptrs[i]);
+    }
+    double t1 = now_sec();
+
+    printf("Time: %.6f sec (%.2f ops/sec)\n",
+        t1 - t0, (iters) / (t1 - t0));
+}
+
+void bench_realloc(size_t iters) {
+    printf("=== Realloc Benchmark (%zu ops) ===\n", iters);
+
+    void *p = mm_malloc(16);
+    double t0 = now_sec();
+    for (size_t i = 0; i < iters; i++) {
+        p = mm_realloc(p, (i % 256) + 1);
+        if (!p) {
+            printf("Realloc failed on iteration %zu!\n", i);
+            return;
+        }
+    }
+    double t1 = now_sec();
+    mm_free(p);
+
+    printf("Time: %.6f sec (%.2f ops/sec)\n",
+        t1 - t0, (iters) / (t1 - t0));
+}
+
+void bench_rw(size_t iters, size_t size) {
+    printf("=== Read/Write Benchmark (%zu ops, block %zu bytes) ===\n",
+        iters, size);
+
+    void *p = mm_malloc(size);
+    uint8_t *buf = malloc(size);
+    memset(buf, 0xAB, size);
+
+    double t0 = now_sec();
+    for (size_t i = 0; i < iters; i++) {
+        mm_write(p, 0, buf, size);
+        mm_read(p, 0, buf, size);
+    }
+    double t1 = now_sec();
+
+    mm_free(p);
+    free(buf);
+
+    printf("Time: %.6f sec (%.2f ops/sec)\n",
+        t1 - t0, (iters) / (t1 - t0));
+}
+
+void bench_mixed(size_t iters) {
+    printf("=== Mixed Workload Benchmark (%zu ops) ===\n", iters);
+
+    void *ptrs[1000] = {0};
+
+    double t0 = now_sec();
+    for (size_t i = 0; i < iters; i++) {
+        int op = rand() % 4;
+        if (op == 0) {  // alloc
+            size_t idx = rand() % 1000;
+            if (ptrs[idx] == NULL)
+                ptrs[idx] = mm_malloc(rand_size(512));
+
+        } else if (op == 1) {  // write
+            size_t idx = rand() % 1000;
+            if (ptrs[idx])
+                mm_write(ptrs[idx], 0, "ABCDEF", 6);
+        } else if (op == 2) {  // realloc
+            continue;
+            size_t idx = rand() % 1000;
+            if (ptrs[idx])
+                ptrs[idx] = mm_realloc(ptrs[idx], rand_size(512));
+        } else {  // free
+            size_t idx = rand() % 1000;
+            if (ptrs[idx]) {
+                mm_free(ptrs[idx]);
+                ptrs[idx] = NULL;
+            }
+        }
+    }
+    double t1 = now_sec();
+
+    // cleanup
+    for (int i = 0; i < 1000; i++)
+        if (ptrs[i])
+            mm_free(ptrs[i]);
+
+    printf("Time: %.6f sec (%.2f ops/sec)\n",
+        t1 - t0, (iters) / (t1 - t0));
+}
+
+//
+// MAIN
+//
 int main() {
     uint8_t *heap = malloc(16000*sizeof(uint8_t));
 
@@ -227,5 +364,28 @@ int main() {
     printf("\n======== ALL TESTS COMPLETE ========\n");
     free(heap);
 
+    const size_t HEAP_SIZE = 64 * 1024 * 1024;  // 64 MB
+    heap = malloc(HEAP_SIZE);
+
+    if (!heap) {
+        printf("Failed to allocate test heap.\n");
+        return 1;
+    }
+
+    printf("Initializing heap (%zu bytes)...\n", HEAP_SIZE);
+    if (mm_init(heap, HEAP_SIZE) != 0) {
+        printf("mm_init failed!\n");
+        return 1;
+    }
+
+    srand(12345);
+
+    bench_malloc(100);
+    bench_free(100);
+    bench_realloc(1e3);
+    bench_rw(5e3, 256);
+    bench_mixed(2e3);
+
+    free(heap);
     return 0;
 }

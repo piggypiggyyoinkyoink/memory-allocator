@@ -58,3 +58,4 @@ dkms.conf
 *.zip
 runme
 *.pdf
+callgrind.*

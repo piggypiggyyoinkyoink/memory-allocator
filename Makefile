@@ -2,11 +2,11 @@
 all: lib runme
 	
 runme: lib
-	gcc -Wall -Wextra runme.c ./liballocator.so -o runme 
+	gcc -g -Wall -Wextra runme.c ./liballocator.so -o runme -lrt
 
 lib:
-	gcc -fPIC -c allocator.c -o allocator.o
-	gcc -shared allocator.o -o liballocator.so
+	gcc -g -fPIC -c allocator.c -o allocator.o
+	gcc -g -shared allocator.o -o liballocator.so
 test: lib
 	gcc -Wall -Wextra runme.c ./liballocator.so -o runme 
 clean:
