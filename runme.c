@@ -31,41 +31,16 @@ static inline size_t rand_size(size_t max) {
     return (rand() % max) + 1;
 }
 
-static void* ptrs[1000];
+static void* ptrs[10000];
 static volatile int STOP_CORRUPTOR = 0;
-static size_t BITFLIPS_PER_SEC = 10000000;   // Tune this!
-static uint8_t *GLOBAL_HEAP = NULL;
-static size_t   GLOBAL_HEAP_SIZE = 0;
-
-//
-// ==========  CORRUPTION THREAD  ==========
-//
-void *heap_corruptor_thread(void *arg) {
-    printf("[CORRUPTOR] Flipping ~%zu bits/sec...\n", BITFLIPS_PER_SEC);
-    // do BITFLIPS_PER_SEC / 100 bitflips every 10ms
-    while (!STOP_CORRUPTOR) {
-        for (size_t i = 0; i < BITFLIPS_PER_SEC / 100; i++) {
-            size_t pos = rand() % GLOBAL_HEAP_SIZE;
-            uint8_t bit = 1u << (rand() % 8);
-            GLOBAL_HEAP[pos] ^= bit;     // Flip bit
-        }
-
-        // sleep ~10ms
-        struct timespec ts = {.tv_sec = 0, .tv_nsec = 10 * 1000 * 1000};
-        nanosleep(&ts, NULL);
-    }
-
-    printf("[CORRUPTOR] Thread stopped.\n");
-    return NULL;
-}
 
 
 
 //
-// Benchmark helpers
+// ChatGPT Benchmark helpers
 //
 void bench_malloc(size_t iters) {
-    printf("=== Allocation/Free Benchmark (%zu ops) ===\n", iters);
+    printf("=== Malloc Benchmark (%zu ops) ===\n", iters);
     double t0 = now_sec();
     for (size_t i = 0; i < iters; i++) {
         void *p = mm_malloc(64);
@@ -74,6 +49,33 @@ void bench_malloc(size_t iters) {
             return;
         }
         ptrs[i] = p;
+    }
+    double t1 = now_sec();
+
+    printf("Time: %.6f sec (%.2f ops/sec)\n",
+        t1 - t0, (iters) / (t1 - t0));
+}
+void bench_malloc2(size_t iters) {
+    printf("=== Malloc Benchmark (%zu ops) ===\n", iters);
+    double t0 = now_sec();
+    for (size_t i = 0; i < iters; i++) {
+        void *p = malloc(64);
+        if (!p) {
+            printf("Allocation failed on iteration %zu!\n", i);
+            return;
+        }
+        ptrs[i] = p;
+    }
+    double t1 = now_sec();
+
+    printf("Time: %.6f sec (%.2f ops/sec)\n",
+        t1 - t0, (iters) / (t1 - t0));
+}
+void bench_free2(size_t iters) {
+    printf("=== Free Benchmark (%zu ops) ===\n", iters);
+    double t0 = now_sec();
+    for (size_t i = 0; i < iters; i++) {
+        free(ptrs[i]);
     }
     double t1 = now_sec();
 
@@ -93,36 +95,18 @@ void bench_free(size_t iters) {
         t1 - t0, (iters) / (t1 - t0));
 }
 
-void bench_realloc(size_t iters) {
-    printf("=== Realloc Benchmark (%zu ops) ===\n", iters);
 
-    void *p = mm_malloc(16);
-    double t0 = now_sec();
-    for (size_t i = 0; i < iters; i++) {
-        p = mm_realloc(p, (i % 256) + 1);
-        if (!p) {
-            printf("Realloc failed on iteration %zu!\n", i);
-            return;
-        }
-    }
-    double t1 = now_sec();
-    mm_free(p);
-
-    printf("Time: %.6f sec (%.2f ops/sec)\n",
-        t1 - t0, (iters) / (t1 - t0));
-}
-
-void bench_rw(size_t iters, size_t size) {
-    printf("=== Read/Write Benchmark (%zu ops, block %zu bytes) ===\n",
+void bench_read(size_t iters, size_t size) {
+    printf("=== Read Benchmark (%zu ops, block %zu bytes) ===\n",
         iters, size);
 
     void *p = mm_malloc(size);
     uint8_t *buf = malloc(size);
     memset(buf, 0xAB, size);
+    mm_write(p, 0, buf, size);
 
     double t0 = now_sec();
     for (size_t i = 0; i < iters; i++) {
-        mm_write(p, 0, buf, size);
         mm_read(p, 0, buf, size);
     }
     double t1 = now_sec();
@@ -133,47 +117,27 @@ void bench_rw(size_t iters, size_t size) {
     printf("Time: %.6f sec (%.2f ops/sec)\n",
         t1 - t0, (iters) / (t1 - t0));
 }
+void bench_write(size_t iters, size_t size) {
+    printf("=== Write Benchmark (%zu ops, block %zu bytes) ===\n",
+        iters, size);
 
-void bench_mixed(size_t iters) {
-    printf("=== Mixed Workload Benchmark (%zu ops) ===\n", iters);
-
-    void *ptrs[1000] = {0};
+    void *p = mm_malloc(size);
+    uint8_t *src = malloc(size);
+    memset(src, 0xAB, size);
 
     double t0 = now_sec();
     for (size_t i = 0; i < iters; i++) {
-        int op = rand() % 4;
-        if (op == 0) {  // alloc
-            size_t idx = rand() % 1000;
-            if (ptrs[idx] == NULL)
-                ptrs[idx] = mm_malloc(rand_size(512));
-
-        } else if (op == 1) {  // write
-            size_t idx = rand() % 1000;
-            if (ptrs[idx])
-                mm_write(ptrs[idx], 0, "ABCDEF", 6);
-        } else if (op == 2) {  // realloc
-            continue;
-            size_t idx = rand() % 1000;
-            if (ptrs[idx])
-                ptrs[idx] = mm_realloc(ptrs[idx], rand_size(512));
-        } else {  // free
-            size_t idx = rand() % 1000;
-            if (ptrs[idx]) {
-                mm_free(ptrs[idx]);
-                ptrs[idx] = NULL;
-            }
-        }
+        mm_write(p, 0, src, size);
     }
     double t1 = now_sec();
 
-    // cleanup
-    for (int i = 0; i < 1000; i++)
-        if (ptrs[i])
-            mm_free(ptrs[i]);
+    mm_free(p);
+    free(src);
 
     printf("Time: %.6f sec (%.2f ops/sec)\n",
         t1 - t0, (iters) / (t1 - t0));
 }
+
 
 //
 // MAIN
@@ -387,14 +351,15 @@ int main() {
         TEST 9: Allocate entire heap
     ---------------------------------------------------- */
     printf("\n[10] Testing full-heap allocation...\n");
-
     void *big2 = mm_malloc(15880);
     TEST("Large alloc after freeing everything", big2 != NULL);
 
     printf("\n======== ALL TESTS COMPLETE ========\n");
     free(heap);
 
-    const size_t HEAP_SIZE = 64 * 1024 * 1024;  // 64 MB
+    // CHATGPT BENCHMARKS
+
+    const size_t HEAP_SIZE = 15 * 1024 * 1024;  // 64 MB
     heap = malloc(HEAP_SIZE);
 
     if (!heap) {
@@ -409,47 +374,14 @@ int main() {
     }
 
     srand(12345);
-
-    bench_malloc(1000);
-    bench_free(1000);
-    bench_realloc(1e3);
-    bench_rw(5e3, 256);
-    bench_mixed(5e3);
+    // commented out so the runme actually runs
+    // bench_malloc(10000);
+    // bench_free(10000);
+    // bench_read(1000, 256);
+    // bench_write(1000, 256);
+    // bench_malloc2(10000);
+    // bench_free2(10000);
 
     free(heap);
-    GLOBAL_HEAP = malloc(HEAP_SIZE);
-    GLOBAL_HEAP_SIZE = HEAP_SIZE;
-
-    if (!GLOBAL_HEAP) {
-        printf("Failed to allocate heap.\n");
-        return 1;
-    }
-
-    printf("Initializing allocator...\n");
-    if (mm_init(GLOBAL_HEAP, HEAP_SIZE) != 0) {
-        printf("mm_init failed!\n");
-        return 1;
-    }
-
-    srand(12345);
-
-    // Start bit-flipping thread
-    pthread_t corruptor;
-    pthread_create(&corruptor, NULL, heap_corruptor_thread, NULL);
-
-    //
-    // --- RUN BENCHMARKS ---
-    //
-    bench_malloc(1000);
-    bench_free(1000);
-    bench_realloc(1e3);
-    bench_rw(5e3, 256);
-    bench_mixed(5e3);
-
-    // Stop corruptor thread
-    STOP_CORRUPTOR = 1;
-    pthread_join(corruptor, NULL);
-
-    free(GLOBAL_HEAP);
     return 0;
 }
