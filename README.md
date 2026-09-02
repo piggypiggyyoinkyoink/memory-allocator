@@ -1,5 +1,5 @@
 # Memory Allocator
-Memory allocator written in C, implementing basic allocator functions:  
+Memory allocator written in C, implementing the following basic allocator functions (`allocator.c`):  
 - `int mm_init(uint8_t *heap, size_t heap_size)`: Initialises the heap used by the allocator. `heap` is the pointer to the heap and `heap_size` is the size of the heap in bytes. Returns 0 on success, -1 otherwise.  
 - `void* mm_malloc(size_t size)`: allocates a block of memory from the heap with 40-byte aligned payload, returning the pointer to this block if successful or `NULL` on failure. `size_t` is the size of the payload of the allocated block.  
 - `void mm_free(void* ptr)`: Frees the allocated block of memory at `ptr`. If `ptr` points to an already freed block of memory, or an invalid memory location, does nothing.  
@@ -18,3 +18,8 @@ This code was designed to meet the following specifications:
 - The allocator must be resistant to block or heap metadata corruption.
 - Block payload corruption must be detected or corrected.
   
+## Notes
+This program was built to run in a black-box environment where only the output of a test file `runme.c` could be used for debugging purposes. Many of the tests in `runme.c` were written using Generative AI (ChatGPT).
+
+## Using in another program
+The allocator functions can be used from another C program by including `allocator.h`.
