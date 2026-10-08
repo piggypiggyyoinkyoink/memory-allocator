@@ -17,9 +17,10 @@ This code was designed to meet the following specifications:
 - It is assumed that `offset` + `len` = the size of block `ptr` in `mm_write`. Partial writes are treated as errors.
 - The allocator must be resistant to block or heap metadata corruption.
 - Block payload corruption must be detected or corrected.
+- All code must be cpplint compliant.
   
 ## Notes
 This program was built to run in a black-box environment where only the output of a test file `runme.c` could be used for debugging purposes. Many of the tests in `runme.c` were written using Generative AI (ChatGPT).
 
 ## Using in another program
-The allocator functions can be used from another C program by including `allocator.h`.
+The allocator functions can be used from another C program by including `allocator.h`. This software is not designed for use in a production environment.
